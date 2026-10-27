@@ -1,0 +1,381 @@
+{
+	Tools = ordered() {
+		PRO_TTL_Corp_LowerThird = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				Input1 = InstanceInput {
+					SourceOp = "Nombre",
+					Source = "StyledText",
+					Name = "Nombre",
+				},
+				Input2 = InstanceInput {
+					SourceOp = "Nombre",
+					Source = "Font",
+					Name = "Fuente del nombre",
+					ControlGroup = 2,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "Nombre",
+					Source = "Style",
+					ControlGroup = 2,
+				},
+				Input4 = InstanceInput {
+					SourceOp = "Nombre",
+					Source = "Red1",
+					Name = "Color del nombre",
+					ControlGroup = 4,
+					Default = 1,
+				},
+				Input5 = InstanceInput {
+					SourceOp = "Nombre",
+					Source = "Green1",
+					ControlGroup = 4,
+					Default = 1,
+				},
+				Input6 = InstanceInput {
+					SourceOp = "Nombre",
+					Source = "Blue1",
+					ControlGroup = 4,
+					Default = 1,
+				},
+				Input7 = InstanceInput {
+					SourceOp = "Cargo",
+					Source = "StyledText",
+					Name = "Cargo",
+				},
+				Input8 = InstanceInput {
+					SourceOp = "Cargo",
+					Source = "Font",
+					Name = "Fuente del cargo",
+					ControlGroup = 8,
+				},
+				Input9 = InstanceInput {
+					SourceOp = "Cargo",
+					Source = "Style",
+					ControlGroup = 8,
+				},
+				Input10 = InstanceInput {
+					SourceOp = "Cargo",
+					Source = "Red1",
+					Name = "Color del cargo",
+					ControlGroup = 10,
+					Default = 0.82,
+				},
+				Input11 = InstanceInput {
+					SourceOp = "Cargo",
+					Source = "Green1",
+					ControlGroup = 10,
+					Default = 0.82,
+				},
+				Input12 = InstanceInput {
+					SourceOp = "Cargo",
+					Source = "Blue1",
+					ControlGroup = 10,
+					Default = 0.82,
+				},
+				Input13 = InstanceInput {
+					SourceOp = "ColorAcento",
+					Source = "TopLeftRed",
+					Name = "Color de la barra",
+					ControlGroup = 13,
+					Default = 1,
+				},
+				Input14 = InstanceInput {
+					SourceOp = "ColorAcento",
+					Source = "TopLeftGreen",
+					ControlGroup = 13,
+					Default = 1,
+				},
+				Input15 = InstanceInput {
+					SourceOp = "ColorAcento",
+					Source = "TopLeftBlue",
+					ControlGroup = 13,
+					Default = 1,
+				},
+				Input16 = InstanceInput {
+					SourceOp = "Posicion",
+					Source = "Center",
+					Name = "Posición",
+				},
+				Input17 = InstanceInput {
+					SourceOp = "Posicion",
+					Source = "Size",
+					Name = "Escala",
+					Default = 1,
+				},
+				Input18 = InstanceInput {
+					SourceOp = "Lienzo",
+					Source = "Entrada",
+					Name = "Duración entrada (% del clip)",
+					Default = 0.15,
+				},
+				Input19 = InstanceInput {
+					SourceOp = "Lienzo",
+					Source = "Salida",
+					Name = "Duración salida (% del clip)",
+					Default = 0.12,
+				}
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput {
+					SourceOp = "Posicion",
+					Source = "Output",
+				}
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Lienzo = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0, },
+						TopLeftGreen = Input { Value = 0, },
+						TopLeftBlue = Input { Value = 0, },
+						TopLeftAlpha = Input { Value = 0, },
+						Progreso = Input {
+							SourceOp = "PROLowerThirdAnim",
+							Source = "Value",
+						},
+						Entrada = Input { Value = 0.15, },
+						Salida = Input { Value = 0.12, },
+						Raw = Input {
+							Value = 1,
+							Expression = "max(0, min(1, min(Lienzo.Progreso/Lienzo.Entrada, (1-Lienzo.Progreso)/Lienzo.Salida)))",
+						},
+						Env = Input {
+							Value = 1,
+							Expression = "Lienzo.Raw*Lienzo.Raw*(3-2*Lienzo.Raw)",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Entrada = {
+							LINKS_Name = "Duración entrada (% del clip)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.15,
+							INP_MinScale = 0.01,
+							INP_MaxScale = 0.5,
+							INP_MinAllowed = 0.01,
+							INP_MaxAllowed = 0.5,
+							ICS_ControlPage = "Controls",
+						},
+						Salida = {
+							LINKS_Name = "Duración salida (% del clip)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.12,
+							INP_MinScale = 0.01,
+							INP_MaxScale = 0.5,
+							INP_MinAllowed = 0.01,
+							INP_MaxAllowed = 0.5,
+							ICS_ControlPage = "Controls",
+						},
+						Raw = {
+							LINKS_Name = "Envolvente lineal",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Env = {
+							LINKS_Name = "Envolvente suave",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							ICS_ControlPage = "Controls",
+						}
+					}
+				},
+				Barra = RectangleMask {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						OutputSize = Input { Value = FuID { "Custom" }, },
+						MaskWidth = Input { Value = 1920, },
+						MaskHeight = Input { Value = 1080, },
+						PixelAspect = Input { Value = { 1, 1 }, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Center = Input { Value = { 0.07, 0.2 }, },
+						Width = Input { Value = 0.004, },
+						Height = Input {
+							Value = 0.075,
+							Expression = "0.075*Lienzo.Env",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -66 } },
+				},
+				ColorAcento = Background {
+					CtrlWShown = false,
+					Inputs = {
+						EffectMask = Input {
+							SourceOp = "Barra",
+							Source = "Mask",
+						},
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -33 } },
+				},
+				Nombre = TextPlus {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Center = Input { Value = { 0.085, 0.225 }, },
+						HorizontalLeftCenterRight = Input { Value = -1, },
+						StyledText = Input { Value = "Nombre Apellido", },
+						Font = Input { Value = "Arial", },
+						Style = Input { Value = "Bold", },
+						Size = Input { Value = 0.05, },
+						Red1 = Input { Value = 1, },
+						Green1 = Input { Value = 1, },
+						Blue1 = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+				},
+				MoverNombre = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input {
+							SourceOp = "Nombre",
+							Source = "Output",
+						},
+						Center = Input {
+							Value = { 0.5, 0.5 },
+							Expression = "Point(0.5 - 0.02*(1-Lienzo.Env), 0.5)",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+				},
+				Cargo = TextPlus {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Center = Input { Value = { 0.085, 0.165 }, },
+						HorizontalLeftCenterRight = Input { Value = -1, },
+						StyledText = Input { Value = "Cargo · Empresa", },
+						Font = Input { Value = "Arial", },
+						Style = Input { Value = "Regular", },
+						Size = Input { Value = 0.032, },
+						Red1 = Input { Value = 0.82, },
+						Green1 = Input { Value = 0.82, },
+						Blue1 = Input { Value = 0.82, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 33 } },
+				},
+				MoverCargo = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input {
+							SourceOp = "Cargo",
+							Source = "Output",
+						},
+						Center = Input {
+							Value = { 0.5, 0.5 },
+							Expression = "Point(0.5 - 0.035*(1-Lienzo.Env), 0.5)",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 33 } },
+				},
+				MergeBarra = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "Lienzo",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "ColorAcento",
+							Source = "Output",
+						},
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, -33 } },
+				},
+				MergeNombre = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "MergeBarra",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "MoverNombre",
+							Source = "Output",
+						},
+						Blend = Input {
+							Value = 1,
+							Expression = "Lienzo.Env",
+						},
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 0 } },
+				},
+				MergeCargo = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "MergeNombre",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "MoverCargo",
+							Source = "Output",
+						},
+						Blend = Input {
+							Value = 1,
+							Expression = "Lienzo.Env",
+						},
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 33 } },
+				},
+				Posicion = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input {
+							SourceOp = "MergeCargo",
+							Source = "Output",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { 220, 33 } },
+				}
+			},
+		},
+		PROLowerThirdAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		}
+	},
+	ActiveTool = "PRO_TTL_Corp_LowerThird"
+}

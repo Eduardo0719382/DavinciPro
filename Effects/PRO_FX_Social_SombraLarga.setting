@@ -1,0 +1,235 @@
+{
+	Tools = ordered() {
+		PRO_FX_Social_SombraLarga = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Sombra", Source = "Angulo", Name = "Ángulo (grados)", Default = -45, },
+				Input2 = InstanceInput { SourceOp = "Sombra", Source = "Distancia", Name = "Longitud", Default = 0.08, },
+				Input3 = InstanceInput { SourceOp = "Sombra", Source = "Decaimiento", Name = "Decaimiento", Default = 0.7, },
+				Input4 = InstanceInput { SourceOp = "Opacidad", Source = "Blend", Name = "Opacidad", Default = 0.6, },
+				Input5 = InstanceInput { SourceOp = "Suaviza", Source = "XBlurSize", Name = "Suavidad", Default = 6, },
+				Input6 = InstanceInput { SourceOp = "Sombra", Source = "Aspecto", Name = "Aspecto del timeline (9:16 = 0.5625)", Default = 0.5625, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Sombra", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 0 } },
+				},
+				Silueta = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Gain = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, -66 } },
+				},
+				Vacio = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0, },
+						TopLeftGreen = Input { Value = 0, },
+						TopLeftBlue = Input { Value = 0, },
+						TopLeftAlpha = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -132 } },
+				},
+				Paso1 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Silueta", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + Sombra.Distancia*0.166667*sin(Sombra.Angulo*3.14159265/180 + 1.5707963)/Sombra.Aspecto, 0.5 + Sombra.Distancia*0.166667*sin(Sombra.Angulo*3.14159265/180))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -297, -99 } },
+				},
+				Capa1 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Vacio", Source = "Output", },
+						Foreground = Input { SourceOp = "Paso1", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "max(0, 1 - Sombra.Decaimiento*0.166667)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -297, -66 } },
+				},
+				Paso2 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Silueta", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + Sombra.Distancia*0.333333*sin(Sombra.Angulo*3.14159265/180 + 1.5707963)/Sombra.Aspecto, 0.5 + Sombra.Distancia*0.333333*sin(Sombra.Angulo*3.14159265/180))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -264, -99 } },
+				},
+				Capa2 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Capa1", Source = "Output", },
+						Foreground = Input { SourceOp = "Paso2", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "max(0, 1 - Sombra.Decaimiento*0.333333)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -264, -66 } },
+				},
+				Paso3 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Silueta", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + Sombra.Distancia*0.5*sin(Sombra.Angulo*3.14159265/180 + 1.5707963)/Sombra.Aspecto, 0.5 + Sombra.Distancia*0.5*sin(Sombra.Angulo*3.14159265/180))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -231, -99 } },
+				},
+				Capa3 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Capa2", Source = "Output", },
+						Foreground = Input { SourceOp = "Paso3", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "max(0, 1 - Sombra.Decaimiento*0.5)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -231, -66 } },
+				},
+				Paso4 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Silueta", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + Sombra.Distancia*0.666667*sin(Sombra.Angulo*3.14159265/180 + 1.5707963)/Sombra.Aspecto, 0.5 + Sombra.Distancia*0.666667*sin(Sombra.Angulo*3.14159265/180))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -198, -99 } },
+				},
+				Capa4 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Capa3", Source = "Output", },
+						Foreground = Input { SourceOp = "Paso4", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "max(0, 1 - Sombra.Decaimiento*0.666667)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -198, -66 } },
+				},
+				Paso5 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Silueta", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + Sombra.Distancia*0.833333*sin(Sombra.Angulo*3.14159265/180 + 1.5707963)/Sombra.Aspecto, 0.5 + Sombra.Distancia*0.833333*sin(Sombra.Angulo*3.14159265/180))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -99 } },
+				},
+				Capa5 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Capa4", Source = "Output", },
+						Foreground = Input { SourceOp = "Paso5", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "max(0, 1 - Sombra.Decaimiento*0.833333)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -66 } },
+				},
+				Paso6 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Silueta", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + Sombra.Distancia*1*sin(Sombra.Angulo*3.14159265/180 + 1.5707963)/Sombra.Aspecto, 0.5 + Sombra.Distancia*1*sin(Sombra.Angulo*3.14159265/180))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -132, -99 } },
+				},
+				Capa6 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Capa5", Source = "Output", },
+						Foreground = Input { SourceOp = "Paso6", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "max(0, 1 - Sombra.Decaimiento*1)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -132, -66 } },
+				},
+				Suaviza = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 6, },
+						Input = Input { SourceOp = "Capa6", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, -66 } },
+				},
+				Opacidad = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Vacio", Source = "Output", },
+						Foreground = Input { SourceOp = "Suaviza", Source = "Output", },
+						Blend = Input { Value = 0.6, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, -66 } },
+				},
+				Sombra = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Opacidad", Source = "Output", },
+						Foreground = Input { SourceOp = "Entrada", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+						Angulo = Input { Value = -45, },
+						Distancia = Input { Value = 0.08, },
+						Decaimiento = Input { Value = 0.7, },
+						Aspecto = Input { Value = 0.5625, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 0 } },
+					UserControls = ordered() {
+						Angulo = {
+							LINKS_Name = "Ángulo (grados)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = -45,
+							INP_MinScale = -180,
+							INP_MaxScale = 180,
+							INP_MinAllowed = -180,
+							INP_MaxAllowed = 180,
+							ICS_ControlPage = "Controls",
+						},
+						Distancia = {
+							LINKS_Name = "Longitud",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.08,
+							INP_MinScale = 0,
+							INP_MaxScale = 0.5,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 0.5,
+							ICS_ControlPage = "Controls",
+						},
+						Decaimiento = {
+							LINKS_Name = "Decaimiento",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.7,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Aspecto = {
+							LINKS_Name = "Aspecto del timeline (9:16 = 0.5625)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.5625,
+							INP_MinScale = 0.4,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0.4,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Social_SombraLarga"
+}

@@ -1,0 +1,213 @@
+{
+	Tools = ordered() {
+		PRO_GEN_Fondo_Luz = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				Input1 = InstanceInput {
+					SourceOp = "Base",
+					Source = "TopLeftRed",
+					Name = "Color de fondo",
+					ControlGroup = 1,
+					Default = 0.05,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "Base",
+					Source = "TopLeftGreen",
+					ControlGroup = 1,
+					Default = 0.05,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "Base",
+					Source = "TopLeftBlue",
+					ControlGroup = 1,
+					Default = 0.06,
+				},
+				Input4 = InstanceInput {
+					SourceOp = "Luz",
+					Source = "TopLeftRed",
+					Name = "Color de la luz",
+					ControlGroup = 4,
+					Default = 0.32,
+				},
+				Input5 = InstanceInput {
+					SourceOp = "Luz",
+					Source = "TopLeftGreen",
+					ControlGroup = 4,
+					Default = 0.34,
+				},
+				Input6 = InstanceInput {
+					SourceOp = "Luz",
+					Source = "TopLeftBlue",
+					ControlGroup = 4,
+					Default = 0.38,
+				},
+				Input7 = InstanceInput {
+					SourceOp = "MezclaLuz",
+					Source = "Blend",
+					Name = "Intensidad de la luz",
+					Default = 0.85,
+				},
+				Input8 = InstanceInput {
+					SourceOp = "Ovalo",
+					Source = "SoftEdge",
+					Name = "Suavidad de la luz",
+					Default = 0.35,
+				},
+				Input9 = InstanceInput {
+					SourceOp = "Base",
+					Source = "Vueltas",
+					Name = "Movimiento (vueltas por clip)",
+					Default = 1,
+				},
+				Input10 = InstanceInput {
+					SourceOp = "MezclaTextura",
+					Source = "Blend",
+					Name = "Textura (grano)",
+					Default = 0.05,
+				}
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput {
+					SourceOp = "MezclaTextura",
+					Source = "Output",
+				}
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Base = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0.05, },
+						TopLeftGreen = Input { Value = 0.05, },
+						TopLeftBlue = Input { Value = 0.06, },
+						TopLeftAlpha = Input { Value = 1, },
+						Progreso = Input {
+							SourceOp = "PROFondoLuzAnim",
+							Source = "Value",
+						},
+						Vueltas = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Vueltas = {
+							LINKS_Name = "Movimiento (vueltas por clip)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 5,
+							INP_MinAllowed = 0,
+							ICS_ControlPage = "Controls",
+						}
+					}
+				},
+				Ovalo = EllipseMask {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						SoftEdge = Input { Value = 0.35, },
+						OutputSize = Input { Value = FuID { "Custom" }, },
+						MaskWidth = Input { Value = 1920, },
+						MaskHeight = Input { Value = 1080, },
+						PixelAspect = Input { Value = { 1, 1 }, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Width = Input { Value = 0.8, },
+						Height = Input { Value = 0.8, },
+						Center = Input {
+							Value = { 0.5, 0.5 },
+							Expression = "Point(0.5 + 0.18*sin(Base.Progreso*Base.Vueltas*6.2831853), 0.5 + 0.12*cos(Base.Progreso*Base.Vueltas*6.2831853*0.7))",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, -66 } },
+				},
+				Luz = Background {
+					CtrlWShown = false,
+					Inputs = {
+						EffectMask = Input {
+							SourceOp = "Ovalo",
+							Source = "Mask",
+						},
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0.32, },
+						TopLeftGreen = Input { Value = 0.34, },
+						TopLeftBlue = Input { Value = 0.38, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, -33 } },
+				},
+				MezclaLuz = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "Base",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "Luz",
+							Source = "Output",
+						},
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.85, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 0 } },
+				},
+				Textura = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 4, },
+						Contrast = Input { Value = 1.5, },
+						XScale = Input { Value = 40, },
+						SeetheRate = Input { Value = 1, },
+						Discontinuous = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 66 } },
+				},
+				MezclaTextura = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "MezclaLuz",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "Textura",
+							Source = "Output",
+						},
+						ApplyMode = Input { Value = FuID { "Overlay" }, },
+						Blend = Input { Value = 0.05, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 220, 0 } },
+				}
+			},
+		},
+		PROFondoLuzAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		}
+	},
+	ActiveTool = "PRO_GEN_Fondo_Luz"
+}

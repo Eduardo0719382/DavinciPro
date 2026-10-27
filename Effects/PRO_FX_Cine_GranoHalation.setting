@@ -1,0 +1,186 @@
+{
+	Tools = ordered() {
+		PRO_FX_Cine_GranoHalation = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput {
+					SourceOp = "Entrada",
+					Source = "Input",
+				},
+				Input1 = InstanceInput {
+					SourceOp = "MezclaHalation",
+					Source = "Blend",
+					Name = "Halation (cantidad)",
+					Default = 0.35,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "Altas",
+					Source = "Low",
+					Name = "Halation (umbral de luces)",
+					Default = 0.75,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "Difusion",
+					Source = "XBlurSize",
+					Name = "Halation (radio)",
+					Default = 30,
+				},
+				Input4 = InstanceInput {
+					SourceOp = "Tinte",
+					Source = "TopLeftRed",
+					Name = "Halation (color)",
+					ControlGroup = 4,
+					Default = 1,
+				},
+				Input5 = InstanceInput {
+					SourceOp = "Tinte",
+					Source = "TopLeftGreen",
+					ControlGroup = 4,
+					Default = 0.25,
+				},
+				Input6 = InstanceInput {
+					SourceOp = "Tinte",
+					Source = "TopLeftBlue",
+					ControlGroup = 4,
+					Default = 0.08,
+				},
+				Input7 = InstanceInput {
+					SourceOp = "MezclaGrano",
+					Source = "Blend",
+					Name = "Grano (cantidad)",
+					Default = 0.12,
+				},
+				Input8 = InstanceInput {
+					SourceOp = "Ruido",
+					Source = "XScale",
+					Name = "Grano (finura)",
+					Default = 40,
+				},
+				Input9 = InstanceInput {
+					SourceOp = "Ruido",
+					Source = "Contrast",
+					Name = "Grano (contraste)",
+					Default = 1.5,
+				}
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput {
+					SourceOp = "MezclaGrano",
+					Source = "Output",
+				}
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -275, 0 } },
+				},
+				Altas = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Saturation = Input { Value = 0.6, },
+						Low = Input { Value = 0.75, },
+						High = Input { Value = 1, },
+						Input = Input {
+							SourceOp = "Entrada",
+							Source = "Output",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -66 } },
+				},
+				Difusion = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 30, },
+						Input = Input {
+							SourceOp = "Altas",
+							Source = "Output",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, -66 } },
+				},
+				Tinte = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 0.25, },
+						TopLeftBlue = Input { Value = 0.08, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, -99 } },
+				},
+				Tenido = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "Difusion",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "Tinte",
+							Source = "Output",
+						},
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, -66 } },
+				},
+				MezclaHalation = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "Entrada",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "Tenido",
+							Source = "Output",
+						},
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.35, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 165, 0 } },
+				},
+				Ruido = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 4, },
+						Contrast = Input { Value = 1.5, },
+						XScale = Input { Value = 40, },
+						SeetheRate = Input { Value = 1, },
+						Discontinuous = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 165, 66 } },
+				},
+				MezclaGrano = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "MezclaHalation",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "Ruido",
+							Source = "Output",
+						},
+						ApplyMode = Input { Value = FuID { "Overlay" }, },
+						Blend = Input { Value = 0.12, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 275, 0 } },
+				}
+			},
+		}
+	},
+	ActiveTool = "PRO_FX_Cine_GranoHalation"
+}

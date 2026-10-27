@@ -1,0 +1,75 @@
+{
+	Tools = ordered() {
+		PRO_FX_Lente_TiltShift = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Franja", Source = "Center", Name = "Posición de la franja enfocada", },
+				Input2 = InstanceInput { SourceOp = "Franja", Source = "Height", Name = "Ancho de la franja", Default = 0.15, },
+				Input3 = InstanceInput { SourceOp = "Franja", Source = "SoftEdge", Name = "Transición", Default = 0.12, },
+				Input4 = InstanceInput { SourceOp = "Franja", Source = "Angle", Name = "Ángulo", Default = 0, },
+				Input5 = InstanceInput { SourceOp = "Desenfoque", Source = "XBlurSize", Name = "Desenfoque", Default = 25, },
+				Input6 = InstanceInput { SourceOp = "Juguete", Source = "Saturation", Name = "Saturación (efecto maqueta)", Default = 1.3, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Juguete", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -330, 0 } },
+				},
+				Desenfoque = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 25, },
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				Franja = RectangleMask {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						OutputSize = Input { Value = FuID { "Custom" }, },
+						MaskWidth = Input { Value = 1920, },
+						MaskHeight = Input { Value = 1080, },
+						PixelAspect = Input { Value = { 1, 1 }, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Invert = Input { Value = 1, },
+						SoftEdge = Input { Value = 0.12, },
+						Center = Input { Value = { 0.5, 0.45 }, },
+						Width = Input { Value = 4, },
+						Height = Input { Value = 0.15, },
+						Angle = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -99 } },
+				},
+				Miniatura = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "Desenfoque", Source = "Output", },
+						Blend = Input { Value = 1, },
+						PerformDepthMerge = Input { Value = 0, },
+						EffectMask = Input { SourceOp = "Franja", Source = "Mask", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+				},
+				Juguete = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Miniatura", Source = "Output", },
+						Contrast = Input { Value = 0.1, },
+						Saturation = Input { Value = 1.3, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Lente_TiltShift"
+}

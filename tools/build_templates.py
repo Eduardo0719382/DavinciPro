@@ -1,0 +1,1506 @@
+"""
+Genera las plantillas de Fusion del lote "Dinamico y Cine".
+
+Uso:  python tools/build_templates.py      (escribe en Effects/ y Transitions/)
+Las 4 piezas del piloto estan escritas a mano y este script no las toca.
+"""
+from pathlib import Path
+
+from fusion_builder import (FuID, I, PI, Tool, clamp01, envelope_ucs, frame_format, macro,
+                            mask_format, pub, pub_color, smooth, uc)
+
+ROOT = Path(__file__).resolve().parent.parent
+BUILT = {}
+
+
+def register(category, name):
+    def deco(fn):
+        BUILT[(category, name)] = fn
+        return fn
+    return deco
+
+
+def solid(name, rgb, pos, alpha=1, mask=None):
+    inputs = {}
+    if mask:
+        inputs["EffectMask"] = I(link=mask, out="Mask")
+    inputs.update(frame_format())
+    inputs.update({"TopLeftRed": I(rgb[0]), "TopLeftGreen": I(rgb[1]),
+                   "TopLeftBlue": I(rgb[2]), "TopLeftAlpha": I(alpha)})
+    return Tool(name, "Background", inputs, pos=pos)
+
+
+def merge(name, bg, fg, pos, mode=None, blend=None, blend_expr=None, ucs=None, extra=None):
+    inputs = {}
+    if bg:
+        inputs["Background"] = I(link=bg)
+    inputs["Foreground"] = I(link=fg)
+    if mode:
+        inputs["ApplyMode"] = I(FuID(mode))
+    if blend is not None or blend_expr:
+        inputs["Blend"] = I(blend if blend is not None else 1, blend_expr)
+    inputs["PerformDepthMerge"] = I(0)
+    inputs.update(extra or {})
+    return Tool(name, "Merge", inputs, ucs, pos)
+
+
+# ======================================================================= EFECTOS DINAMICOS
+@register("Effects", "PRO_FX_Din_PunchIn")
+def punch_in(name, anim):
+    h = "Zoom"
+    ucs, env = envelope_ucs(h, 0.08, 0)
+    ucs.insert(1, uc("ZoomExtra", "Zoom extra", 0.15, 0, 1))
+    tools = [Tool(h, "Transform", {
+        "Center": I((0.5, 0.5)),
+        "Size": I(1, f"1 + {h}.ZoomExtra*{h}.Env"),
+        "Progreso": I(link=anim, out="Value"),
+        "ZoomExtra": I(0.15), **env}, ucs, (0, 0))]
+    pubs = [pub(h, "ZoomExtra", "Zoom extra", 0.15),
+            pub(h, "Center", "Centro del zoom"),
+            pub(h, "Entrada", "Duración entrada (% del clip)", 0.08),
+            pub(h, "Salida", "Duración salida (% del clip, 0 = sin salida)", 0)]
+    return macro(name, [(h, "Input")], pubs, h, tools, anim)
+
+
+@register("Effects", "PRO_FX_Din_Shake")
+def shake(name, anim):
+    h = "Sacudida"
+    v = f"{h}.Velocidad"
+    amp = f"{h}.Intensidad*0.03*(1 - {h}.Decaimiento*{h}.Progreso)"
+    cx = f"0.5 + {h}.Amp*(0.6*sin(time*0.9*{v}) + 0.4*sin(time*2.3*{v} + 1.3))"
+    cy = f"0.5 + {h}.Amp*(0.6*sin(time*1.1*{v} + 0.7) + 0.4*sin(time*2.9*{v} + 2.1))"
+    ang = f"{h}.Rotacion*2.5*(1 - {h}.Decaimiento*{h}.Progreso)*sin(time*0.7*{v} + 0.4)"
+    size = f"1 + {h}.Intensidad*0.07 + {h}.Rotacion*0.05"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1),
+           uc("Intensidad", "Intensidad", 0.3, 0, 1),
+           uc("Velocidad", "Velocidad", 1, 0.1, 3),
+           uc("Rotacion", "Rotación", 0.3, 0, 1),
+           uc("Decaimiento", "Decaimiento (1 = se calma al final)", 0, 0, 1),
+           uc("Amp", "Amplitud interna", 0, 0, 1, clamp=False)]
+    tools = [Tool(h, "Transform", {
+        "Center": I((0.5, 0.5), f"Point({cx}, {cy})"),
+        "Size": I(1, size),
+        "Angle": I(0, ang),
+        "Progreso": I(link=anim, out="Value"),
+        "Intensidad": I(0.3), "Velocidad": I(1), "Rotacion": I(0.3), "Decaimiento": I(0),
+        "Amp": I(0, amp)}, ucs, (0, 0))]
+    pubs = [pub(h, "Intensidad", "Intensidad", 0.3), pub(h, "Velocidad", "Velocidad", 1),
+            pub(h, "Rotacion", "Rotación", 0.3), pub(h, "Decaimiento", "Decaimiento (1 = se calma al final)", 0)]
+    return macro(name, [(h, "Input")], pubs, h, tools, anim)
+
+
+@register("Effects", "PRO_FX_Din_RGBSplit")
+def rgb_split(name, anim):
+    h = "Aberracion"
+    a = f"{h}.Angulo*{PI}/180"
+    pulse = f"(1 - {h}.Pulso + {h}.Pulso*sin(time*1.7*{h}.VelPulso)*sin(time*1.7*{h}.VelPulso)*sin(time*0.37*{h}.VelPulso + 1)*sin(time*0.37*{h}.VelPulso + 1)*4)"
+    off = f"{h}.Separacion*{pulse}"
+    dx, dy = f"{h}.Off*sin({a} + 1.5707963)", f"{h}.Off*sin({a})*1.7778"
+    ucs = [uc("Separacion", "Separación", 0.006, 0, 0.05),
+           uc("Angulo", "Ángulo (grados)", 0, -180, 180),
+           uc("Pulso", "Pulso glitch", 0, 0, 1),
+           uc("VelPulso", "Velocidad del pulso", 1, 0.1, 4),
+           uc("Off", "Desplazamiento interno", 0, 0, 1, clamp=False)]
+    tools = [
+        Tool("Entrada", "PipeRouter", pos=(-330, 0)),
+        Tool("Rojo", "Transform", {"Input": I(link="Entrada"),
+                                   "Center": I((0.5, 0.5), f"Point(0.5 + {dx}, 0.5 + {dy})")}, pos=(-220, -66)),
+        Tool("Azul", "Transform", {"Input": I(link="Entrada"),
+                                   "Center": I((0.5, 0.5), f"Point(0.5 - {dx}, 0.5 - {dy})")}, pos=(-220, 66)),
+        solid("SoloRojo", (1, 0, 0), (-110, -99)),
+        solid("SoloVerde", (0, 1, 0), (-110, -33)),
+        solid("SoloAzul", (0, 0, 1), (-110, 99)),
+        merge("CanalR", "Rojo", "SoloRojo", (0, -66), "Multiply"),
+        merge("CanalG", "Entrada", "SoloVerde", (0, 0), "Multiply"),
+        merge("CanalB", "Azul", "SoloAzul", (0, 66), "Multiply"),
+        merge("SumaRG", "CanalR", "CanalG", (110, -33), "Screen"),
+        merge("SumaRGB", "SumaRG", "CanalB", (110, 33), "Screen"),
+        merge(h, "Entrada", "SumaRGB", (220, 0), blend=1, ucs=ucs, extra={
+            "Separacion": I(0.006), "Angulo": I(0), "Pulso": I(0), "VelPulso": I(1),
+            "Off": I(0, off)}),
+    ]
+    pubs = [pub(h, "Separacion", "Separación", 0.006), pub(h, "Angulo", "Ángulo (grados)", 0),
+            pub(h, "Pulso", "Pulso glitch", 0), pub(h, "VelPulso", "Velocidad del pulso", 1),
+            pub(h, "Blend", "Mezcla con el original", 1)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Din_FlashBeat")
+def flash_beat(name, anim):
+    h = "Destello"
+    decay = f"(1 - {clamp01(f'{h}.Progreso/max({h}.Duracion, 0.0001)')})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1),
+           uc("Intensidad", "Intensidad del flash", 0.8, 0, 1),
+           uc("Duracion", "Duración (% del clip)", 0.12, 0.01, 1),
+           uc("Exposicion", "Golpe de exposición", 0.3, 0, 2),
+           uc("Caida", "Caída interna", 0, 0, 1, clamp=False)]
+    tools = [
+        Tool("Exposicion", "BrightnessContrast", {"Gain": I(1, f"1 + {h}.Exposicion*{h}.Caida")}, pos=(-110, 0)),
+        solid("ColorFlash", (1, 1, 1), (-110, -66)),
+        merge(h, "Exposicion", "ColorFlash", (0, 0), blend_expr=f"{h}.Intensidad*{h}.Caida", blend=0, ucs=ucs, extra={
+            "Progreso": I(link=anim, out="Value"), "Intensidad": I(0.8), "Duracion": I(0.12),
+            "Exposicion": I(0.3), "Caida": I(0, f"{decay}*{decay}")}),
+    ]
+    pubs = [pub(h, "Intensidad", "Intensidad del flash", 0.8), pub(h, "Duracion", "Duración (% del clip)", 0.12),
+            pub_color("ColorFlash", "Color del flash", (1, 1, 1), 3), pub(h, "Exposicion", "Golpe de exposición", 0.3)]
+    return macro(name, [("Exposicion", "Input")], pubs, h, tools, anim)
+
+
+# ======================================================================= EFECTOS CINE
+@register("Effects", "PRO_FX_Cine_Letterbox")
+def letterbox(name, anim):
+    h = "Barras"
+    ucs, env = envelope_ucs(h, 0.1, 0)
+    ucs += [uc("AspDest", "Aspecto destino", 2.39, 1, 3),
+            uc("AspTL", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3),
+            uc("H", "Altura interna", 0, 0, 1, clamp=False)]
+    tools = [
+        solid("Negro", (0, 0, 0), (-110, -66)),
+        Tool("BarraSup", "Transform", {"Input": I(link="Negro"),
+                                       "Center": I((0.5, 1.5), f"Point(0.5, 1.5 - {h}.H)")}, pos=(0, -99)),
+        Tool("BarraInf", "Transform", {"Input": I(link="Negro"),
+                                       "Center": I((0.5, -0.5), f"Point(0.5, -0.5 + {h}.H)")}, pos=(0, -33)),
+        merge("ConSup", None, "BarraSup", (110, 0)),
+        merge(h, "ConSup", "BarraInf", (220, 0), ucs=ucs, extra={
+            "Progreso": I(link=anim, out="Value"), **env, "AspDest": I(2.39), "AspTL": I(1.7778),
+            "H": I(0, f"max(0, (1 - {h}.AspTL/{h}.AspDest)/2)*{h}.Env")}),
+    ]
+    pubs = [pub(h, "AspDest", "Aspecto destino", 2.39),
+            pub(h, "AspTL", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778),
+            pub(h, "Entrada", "Duración entrada (% del clip)", 0.1),
+            pub(h, "Salida", "Duración salida (% del clip, 0 = sin salida)", 0),
+            pub_color("Negro", "Color de las barras", (0, 0, 0), 5)]
+    return macro(name, [("ConSup", "Background")], pubs, h, tools, anim)
+
+
+@register("Effects", "PRO_FX_Cine_Vineta")
+def vineta(name, anim):
+    tools = [
+        Tool("Ovalo", "EllipseMask", {**mask_format(), "Invert": I(1), "SoftEdge": I(0.35),
+                                      "Width": I(1.25), "Height": I(0.8)}, pos=(-110, -66)),
+        solid("Sombra", (0, 0, 0), (-110, -33), mask="Ovalo"),
+        merge("Vineta", None, "Sombra", (0, 0), blend=0.5),
+    ]
+    pubs = [pub("Vineta", "Blend", "Intensidad", 0.5), pub("Ovalo", "SoftEdge", "Suavidad", 0.35),
+            pub("Ovalo", "Width", "Ancho", 1.25), pub("Ovalo", "Height", "Alto", 0.8),
+            pub("Ovalo", "Center", "Centro"), pub_color("Sombra", "Color", (0, 0, 0), 6)]
+    return macro(name, [("Vineta", "Background")], pubs, "Vineta", tools)
+
+
+@register("Effects", "PRO_FX_Cine_Difusion")
+def difusion(name, anim):
+    tools = [
+        Tool("Entrada", "PipeRouter", pos=(-330, 0)),
+        Tool("Altas", "BrightnessContrast", {"Input": I(link="Entrada"), "Low": I(0.6), "High": I(1)}, pos=(-220, -66)),
+        Tool("Halo", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(60), "Input": I(link="Altas")}, pos=(-110, -66)),
+        Tool("Suave", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(8), "Input": I(link="Entrada")}, pos=(-220, 66)),
+        merge("Suavizado", "Entrada", "Suave", (-110, 0), blend=0.25),
+        merge("Brillo", "Suavizado", "Halo", (0, 0), "Screen", blend=0.45),
+        Tool("Negros", "BrightnessContrast", {"Input": I(link="Brillo"), "Lift": I(0.02)}, pos=(110, 0)),
+    ]
+    pubs = [pub("Brillo", "Blend", "Brillo en altas luces", 0.45), pub("Altas", "Low", "Umbral de altas luces", 0.6),
+            pub("Halo", "XBlurSize", "Radio del brillo", 60), pub("Suavizado", "Blend", "Suavizado del detalle", 0.25),
+            pub("Negros", "Lift", "Negros levantados", 0.02)]
+    return macro(name, [("Entrada", "Input")], pubs, "Negros", tools)
+
+
+# ======================================================================= TRANSICIONES
+@register("Transitions", "PRO_TR_ZoomPunch")
+def zoom_punch(name, anim):
+    h = "Mezcla"
+    p = f"{h}.Progreso"
+    a, b = f"min(1, 2*{p})", f"(1 - max(0, 2*{p} - 1))"
+    blur = f"{h}.Desenfoque*sin({p}*{PI})*sin({p}*{PI})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Zoom", "Zoom", 1, 0, 3), uc("Desenfoque", "Desenfoque", 20, 0, 100)]
+    tools = [
+        Tool("ZoomSaliente", "Transform", {"Size": I(1, f"1 + {h}.Zoom*{a}*{a}")}, pos=(-220, -33)),
+        Tool("ZoomEntrante", "Transform", {"Size": I(1, f"1 + {h}.Zoom*{b}*{b}")}, pos=(-220, 33)),
+        Tool("BlurSaliente", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, blur),
+                                      "Input": I(link="ZoomSaliente")}, pos=(-110, -33)),
+        Tool("BlurEntrante", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, blur),
+                                      "Input": I(link="ZoomEntrante")}, pos=(-110, 33)),
+        Tool(h, "Dissolve", {
+            "Mix": I(0, smooth(clamp01(f"({p} - 0.4)/0.2"))),
+            "Background": I(link="BlurSaliente"), "Foreground": I(link="BlurEntrante"),
+            "Progreso": I(link=anim, out="Value"), "Zoom": I(1), "Desenfoque": I(20)}, ucs, (0, 0)),
+    ]
+    pubs = [pub(h, "Zoom", "Zoom", 1), pub(h, "Desenfoque", "Desenfoque", 20)]
+    return macro(name, [("ZoomSaliente", "Input"), ("ZoomEntrante", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_WhipPan")
+def whip_pan(name, anim):
+    h = "Barrido"
+    p, d, v, e = f"{h}.Progreso", f"{h}.Direccion", f"{h}.Vertical", f"{h}.Env"
+    blur = f"{h}.Desenfoque*sin({p}*{PI})*sin({p}*{PI})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1),
+           uc("Direccion", "Dirección (1 / -1)", 1, -1, 1, integer=True),
+           uc("Vertical", "Barrido vertical", 0, 0, 1, checkbox=True),
+           uc("Desenfoque", "Desenfoque de movimiento", 80, 0, 200),
+           uc("Raw", "Curva interna", 0, 0, 1, clamp=False),
+           uc("Env", "Curva interna suave", 0, 0, 1, clamp=False)]
+
+    def blur_tool(tname, pos):
+        # desenfoque solo en el eje del movimiento (LockXY = 0 separa X e Y)
+        return Tool(tname, "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0),
+                                    "XBlurSize": I(0, f"{blur}*(1 - {v})"),
+                                    "YBlurSize": I(0, f"{blur}*{v}")}, pos=pos)
+
+    tools = [
+        blur_tool("BlurSaliente", (-220, -33)),
+        blur_tool("BlurEntrante", (-220, 33)),
+        Tool("MoverSaliente", "Transform", {"Input": I(link="BlurSaliente"), "Center": I(
+            (0.5, 0.5), f"Point(0.5 - {d}*{e}*(1 - {v}), 0.5 - {d}*{e}*{v})")}, pos=(-110, -33)),
+        Tool("MoverEntrante", "Transform", {"Input": I(link="BlurEntrante"), "Center": I(
+            (0.5, 0.5), f"Point(0.5 + {d}*(1 - {e})*(1 - {v}), 0.5 + {d}*(1 - {e})*{v})")}, pos=(-110, 33)),
+        merge(h, "MoverSaliente", "MoverEntrante", (0, 0), ucs=ucs, extra={
+            "Progreso": I(link=anim, out="Value"), "Direccion": I(1), "Vertical": I(0), "Desenfoque": I(80),
+            "Raw": I(0, smooth(p)), "Env": I(0, smooth(f"{h}.Raw"))}),
+    ]
+    pubs = [pub(h, "Direccion", "Dirección (1 / -1)", 1), pub(h, "Vertical", "Barrido vertical", 0),
+            pub(h, "Desenfoque", "Desenfoque de movimiento", 80)]
+    return macro(name, [("BlurSaliente", "Input"), ("BlurEntrante", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_LightLeak")
+def light_leak(name, anim):
+    h = "Mezcla"
+    p = f"{h}.Progreso"
+    bell = f"{h}.Intensidad*sin({p}*{PI})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Intensidad", "Intensidad de la fuga", 0.9, 0, 1)]
+    tools = [
+        Tool(h, "Dissolve", {"Mix": I(0, smooth(clamp01(f"({p} - 0.3)/0.4"))),
+                             "Progreso": I(link=anim, out="Value"), "Intensidad": I(0.9)}, ucs, (0, 0)),
+        Tool("Ovalo1", "EllipseMask", {**mask_format(), "SoftEdge": I(0.5), "Width": I(0.9), "Height": I(0.9),
+                                       "Center": I((0.5, 0.5), f"Point(-0.3 + 1.6*{p}, 0.6 + 0.1*sin({p}*{PI}))")},
+             pos=(0, -132)),
+        Tool("Ovalo2", "EllipseMask", {**mask_format(), "SoftEdge": I(0.4), "Width": I(0.6), "Height": I(0.6),
+                                       "Center": I((0.5, 0.5), f"Point(1.2 - 1.2*{p}, 0.35)")}, pos=(110, -132)),
+        solid("Fuga1", (1, 0.55, 0.2), (0, -99), mask="Ovalo1"),
+        solid("Fuga2", (1, 0.25, 0.1), (110, -99), mask="Ovalo2"),
+        merge("Luz1", h, "Fuga1", (110, 0), "Screen", blend=0, blend_expr=bell),
+        merge("Luz2", "Luz1", "Fuga2", (220, 0), "Screen", blend=0, blend_expr=f"0.8*{bell}"),
+    ]
+    pubs = [pub(h, "Intensidad", "Intensidad de la fuga", 0.9),
+            pub_color("Fuga1", "Color principal", (1, 0.55, 0.2), 2),
+            pub_color("Fuga2", "Color secundario", (1, 0.25, 0.1), 3)]
+    return macro(name, [(h, "Background"), (h, "Foreground")], pubs, "Luz2", tools, anim)
+
+
+# ======================================================================= LENTES (bloques reutilizables)
+def blk_radial_ca(p, src, host, pos_x):
+    """Aberracion cromatica lateral: R y B escalados hacia fuera desde el centro (franja magenta/verde en bordes).
+    Ambos canales crecen (>= 1) para no dejar huecos en los bordes."""
+    k = f"{host}.Aberracion*0.004"
+    return [
+        Tool(f"{p}R", "Transform", {"Input": I(link=src), "Size": I(1, f"1 + {k}")}, pos=(pos_x, -66)),
+        Tool(f"{p}B", "Transform", {"Input": I(link=src), "Size": I(1, f"1 + 2*{k}")}, pos=(pos_x, 66)),
+        solid(f"{p}SoloR", (1, 0, 0), (pos_x + 55, -99)),
+        solid(f"{p}SoloG", (0, 1, 0), (pos_x + 55, -33)),
+        solid(f"{p}SoloB", (0, 0, 1), (pos_x + 55, 99)),
+        merge(f"{p}CanalR", f"{p}R", f"{p}SoloR", (pos_x + 110, -66), "Multiply"),
+        merge(f"{p}CanalG", src, f"{p}SoloG", (pos_x + 110, 0), "Multiply"),
+        merge(f"{p}CanalB", f"{p}B", f"{p}SoloB", (pos_x + 110, 66), "Multiply"),
+        merge(f"{p}RG", f"{p}CanalR", f"{p}CanalG", (pos_x + 165, -33), "Screen"),
+        merge(f"{p}RGB", f"{p}RG", f"{p}CanalB", (pos_x + 220, 0), "Screen"),
+    ], f"{p}RGB"
+
+
+def blk_soft_edges(p, src, pos_x, blur=12, x_only=False, soft=0.5, w=1.1, h=0.75):
+    """Bordes y esquinas blandos: version desenfocada mezclada fuera de un ovalo central."""
+    binputs = {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(blur), "Input": I(link=src)}
+    if x_only:
+        binputs.update({"LockXY": I(0), "YBlurSize": I(0)})
+    return [
+        Tool(f"{p}Blur", "Blur", binputs, pos=(pos_x, -66)),
+        Tool(f"{p}Mascara", "EllipseMask", {**mask_format(), "Invert": I(1), "SoftEdge": I(soft),
+                                             "Width": I(w), "Height": I(h)}, pos=(pos_x + 55, -99)),
+        merge(f"{p}Bordes", src, f"{p}Blur", (pos_x + 110, 0), blend=1,
+              extra={"EffectMask": I(link=f"{p}Mascara", out="Mask")}),
+    ], f"{p}Bordes"
+
+
+def blk_bloom(p, src, pos_x, low=0.7, radius=40, blend=0.3, tint=None):
+    tools = [Tool(f"{p}Altas", "BrightnessContrast", {"Input": I(link=src), "Low": I(low), "High": I(1)}, pos=(pos_x, -66)),
+             Tool(f"{p}Halo", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(radius),
+                                       "Input": I(link=f"{p}Altas")}, pos=(pos_x + 55, -66))]
+    last = f"{p}Halo"
+    if tint:
+        tools += [solid(f"{p}Tinte", tint, (pos_x + 55, -99)),
+                  merge(f"{p}Tenido", last, f"{p}Tinte", (pos_x + 110, -66), "Multiply")]
+        last = f"{p}Tenido"
+    tools.append(merge(f"{p}Bloom", src, last, (pos_x + 165, 0), "Screen", blend=blend))
+    return tools, f"{p}Bloom"
+
+
+def blk_cast(p, src, pos_x, rgb, blend):
+    """Dominante de color: multiplicar por un color casi blanco."""
+    return [solid(f"{p}Color", rgb, (pos_x, -66)),
+            merge(f"{p}Dominante", src, f"{p}Color", (pos_x + 55, 0), "Multiply", blend=blend)], f"{p}Dominante"
+
+
+def blk_tone(p, src, pos_x, contrast=0.0, lift=0.0, sat=1.0):
+    return [Tool(f"{p}Tono", "BrightnessContrast", {"Input": I(link=src), "Contrast": I(contrast),
+                                                    "Lift": I(lift), "Saturation": I(sat)}, pos=(pos_x, 0))], f"{p}Tono"
+
+
+def blk_vignette(p, src, pos_x, amount=0.4, soft=0.5, w=1.25, h=0.85):
+    return [Tool(f"{p}Ovalo", "EllipseMask", {**mask_format(), "Invert": I(1), "SoftEdge": I(soft),
+                                              "Width": I(w), "Height": I(h)}, pos=(pos_x, -99)),
+            solid(f"{p}Sombra", (0, 0, 0), (pos_x, -66), mask=f"{p}Ovalo"),
+            merge(f"{p}Vineta", src, f"{p}Sombra", (pos_x + 55, 0), blend=amount)], f"{p}Vineta"
+
+
+def host_router(name, ucs, extra, pos):
+    """Herramienta final que recibe la imagen y aloja los controles compartidos (PipeRouter no admite controles fiables)."""
+    return Tool(name, "BrightnessContrast", extra, ucs, pos)
+
+
+# ======================================================================= LENTES
+@register("Effects", "PRO_FX_Lente_Anamorfico")
+def lente_anamorfico(name, anim):
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)),
+             Tool("Fuentes", "BrightnessContrast", {"Input": I(link="Entrada"), "Low": I(0.85), "High": I(1),
+                                                    "Saturation": I(0)}, pos=(-330, -132))]
+    for tname, length, y in (("RayaLarga", 400, -165), ("RayaCorta", 90, -99)):
+        tools.append(Tool(tname, "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0),
+                                          "XBlurSize": I(length), "YBlurSize": I(1),
+                                          "Input": I(link="Fuentes")}, pos=(-220, y)))
+    tools += [merge("Rayas", "RayaLarga", "RayaCorta", (-110, -132), "Screen"),
+              solid("ColorRaya", (0.35, 0.6, 1), (-110, -198)),
+              merge("RayaTenida", "Rayas", "ColorRaya", (0, -132), "Multiply"),
+              merge("Destellos", "Entrada", "RayaTenida", (110, 0), "Screen", blend=0.6)]
+    t, last = blk_soft_edges("Lat", "Destellos", 165, blur=18, x_only=True, soft=0.6, w=1.4, h=1.4)
+    tools += t
+    t, last = blk_cast("Frio", last, 330, (0.94, 0.98, 1), 1)
+    tools += t
+    t, last = blk_vignette("Vin", last, 440, amount=0.3)
+    tools += t
+    pubs = [pub("Destellos", "Blend", "Destellos (intensidad)", 0.6),
+            pub("Fuentes", "Low", "Destellos (umbral de luces)", 0.85),
+            pub("RayaLarga", "XBlurSize", "Destellos (longitud)", 400),
+            pub_color("ColorRaya", "Destellos (color)", (0.35, 0.6, 1), 4),
+            pub("LatBlur", "XBlurSize", "Estiramiento en laterales", 18),
+            pub("FrioDominante", "Blend", "Dominante fría", 1),
+            pub("VinVineta", "Blend", "Viñeta", 0.3)]
+    return macro(name, [("Entrada", "Input")], pubs, last, tools)
+
+
+def lens_chain(prefix_tools, ca, edges, bloom, tone, cast, vig):
+    """Cadena comun de lentes de caracter: CA -> bordes -> bloom -> tono -> dominante -> vineta."""
+    tools = list(prefix_tools)
+    t, last = blk_radial_ca("CA", "Entrada", "Lente", -330)
+    tools += t
+    t, last = blk_soft_edges("Esq", last, -55, **edges)
+    tools += t
+    t, last = blk_bloom("Brillo", last, 110, **bloom)
+    tools += t
+    t, last = blk_tone("Grade", last, 330, **tone)
+    tools += t
+    t, last = blk_cast("Calidez", last, 385, *cast)
+    tools += t
+    t, last = blk_vignette("Vin", last, 495, **vig)
+    tools += t
+    tools.append(host_router("Lente", [uc("Aberracion", "Aberración cromática", ca, 0, 5)],
+                             {"Input": I(link=last), "Aberracion": I(ca)}, (605, 0)))
+    pubs = [pub("Lente", "Aberracion", "Aberración cromática", ca),
+            pub("EsqBlur", "XBlurSize", "Esquinas blandas", edges["blur"]),
+            pub("BrilloBloom", "Blend", "Halo en luces", bloom["blend"]),
+            pub("GradeTono", "Contrast", "Contraste", tone["contrast"]),
+            pub("GradeTono", "Lift", "Negros levantados", tone["lift"]),
+            pub("GradeTono", "Saturation", "Saturación", tone["sat"]),
+            pub("CalidezDominante", "Blend", "Dominante de color", cast[1]),
+            pub_color("CalidezColor", "Color de la dominante", cast[0], 9),
+            pub("VinVineta", "Blend", "Viñeta", vig["amount"])]
+    return tools, pubs
+
+
+@register("Effects", "PRO_FX_Lente_Vintage")
+def lente_vintage(name, anim):
+    tools, pubs = lens_chain([Tool("Entrada", "PipeRouter", pos=(-440, 0))], ca=1.0,
+                             edges=dict(blur=10, soft=0.5, w=1.1, h=0.75),
+                             bloom=dict(low=0.65, radius=35, blend=0.35, tint=(1, 0.85, 0.7)),
+                             tone=dict(contrast=-0.12, lift=0.03, sat=0.85),
+                             cast=((1, 0.95, 0.86), 0.8), vig=dict(amount=0.35))
+    return macro(name, [("Entrada", "Input")], pubs, "Lente", tools)
+
+
+@register("Effects", "PRO_FX_Lente_Lomo")
+def lente_lomo(name, anim):
+    tools, pubs = lens_chain([Tool("Entrada", "PipeRouter", pos=(-440, 0))], ca=2.0,
+                             edges=dict(blur=20, soft=0.4, w=0.95, h=0.65),
+                             bloom=dict(low=0.75, radius=25, blend=0.2, tint=None),
+                             tone=dict(contrast=0.2, lift=0.0, sat=1.35),
+                             cast=((0.95, 1, 0.9), 0.6), vig=dict(amount=0.75, soft=0.35, w=1.05, h=0.75))
+    return macro(name, [("Entrada", "Input")], pubs, "Lente", tools)
+
+
+@register("Effects", "PRO_FX_Lente_AberracionRadial")
+def lente_ca(name, anim):
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0))]
+    t, last = blk_radial_ca("CA", "Entrada", "Lente", -330)
+    tools += t
+    tools.append(host_router("Lente", [uc("Aberracion", "Intensidad", 2.0, 0, 10)],
+                             {"Input": I(link=last), "Aberracion": I(2.0)}, (0, 0)))
+    pubs = [pub("Lente", "Aberracion", "Intensidad", 2.0)]
+    return macro(name, [("Entrada", "Input")], pubs, "Lente", tools)
+
+
+@register("Effects", "PRO_FX_Lente_TiltShift")
+def lente_tiltshift(name, anim):
+    tools = [Tool("Entrada", "PipeRouter", pos=(-330, 0)),
+             Tool("Desenfoque", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(25),
+                                         "Input": I(link="Entrada")}, pos=(-220, -66)),
+             Tool("Franja", "RectangleMask", {**mask_format(), "Invert": I(1), "SoftEdge": I(0.12),
+                                              "Center": I((0.5, 0.45)), "Width": I(4), "Height": I(0.15),
+                                              "Angle": I(0)}, pos=(-110, -99)),
+             merge("Miniatura", "Entrada", "Desenfoque", (-110, 0), blend=1,
+                   extra={"EffectMask": I(link="Franja", out="Mask")}),
+             Tool("Juguete", "BrightnessContrast", {"Input": I(link="Miniatura"), "Contrast": I(0.1),
+                                                    "Saturation": I(1.3)}, pos=(0, 0))]
+    pubs = [pub("Franja", "Center", "Posición de la franja enfocada"),
+            pub("Franja", "Height", "Ancho de la franja", 0.15),
+            pub("Franja", "SoftEdge", "Transición", 0.12),
+            pub("Franja", "Angle", "Ángulo", 0),
+            pub("Desenfoque", "XBlurSize", "Desenfoque", 25),
+            pub("Juguete", "Saturation", "Saturación (efecto maqueta)", 1.3)]
+    return macro(name, [("Entrada", "Input")], pubs, "Juguete", tools)
+
+
+# ======================================================================= ESTILO PLUGINS DE PAGO (lote 4)
+def blk_channel_shift(p, src, dx, dy, pos_x):
+    """Separa R y B en direcciones opuestas (dx, dy son expresiones) y recombina en Screen."""
+    return [
+        Tool(f"{p}R", "Transform", {"Input": I(link=src), "Center": I((0.5, 0.5), f"Point(0.5 + {dx}, 0.5 + {dy})")}, pos=(pos_x, -66)),
+        Tool(f"{p}B", "Transform", {"Input": I(link=src), "Center": I((0.5, 0.5), f"Point(0.5 - {dx}, 0.5 - {dy})")}, pos=(pos_x, 66)),
+        solid(f"{p}SoloR", (1, 0, 0), (pos_x + 55, -99)),
+        solid(f"{p}SoloG", (0, 1, 0), (pos_x + 55, -33)),
+        solid(f"{p}SoloB", (0, 0, 1), (pos_x + 55, 99)),
+        merge(f"{p}CanalR", f"{p}R", f"{p}SoloR", (pos_x + 110, -66), "Multiply"),
+        merge(f"{p}CanalG", src, f"{p}SoloG", (pos_x + 110, 0), "Multiply"),
+        merge(f"{p}CanalB", f"{p}B", f"{p}SoloB", (pos_x + 110, 66), "Multiply"),
+        merge(f"{p}RG", f"{p}CanalR", f"{p}CanalG", (pos_x + 165, -33), "Screen"),
+        merge(f"{p}RGB", f"{p}RG", f"{p}CanalB", (pos_x + 220, 0), "Screen"),
+    ], f"{p}RGB"
+
+
+def blk_weave_breath(p, src, host, pos_x):
+    """Gate weave (vaiven mecanico del fotograma) + film breath (parpadeo de exposicion/color)."""
+    t = "time"
+    w = f"{host}.Weave*{host}.EscalaFormato"
+    r = f"{host}.Respiracion*{host}.EscalaFormato"
+    cx = f"0.5 + {w}*0.0015*(sin({t}*0.37) + 0.5*sin({t}*1.13 + 2))"
+    cy = f"0.5 + {w}*0.0025*(sin({t}*0.29 + 1) + 0.5*sin({t}*0.91))"
+    return [
+        Tool(f"{p}Weave", "Transform", {"Input": I(link=src), "Center": I((0.5, 0.5), f"Point({cx}, {cy})"),
+                                        "Size": I(1, f"1 + {w}*0.006")}, pos=(pos_x, 0)),
+        Tool(f"{p}Respira", "BrightnessContrast", {
+            "Input": I(link=f"{p}Weave"),
+            "Gain": I(1, f"1 + {r}*0.025*sin({t}*7.3)*sin({t}*3.1 + 1)"),
+            "Saturation": I(1, f"1 + {r}*0.03*sin({t}*5.7 + 2)*sin({t}*2.3)")}, pos=(pos_x + 55, 0)),
+    ], f"{p}Respira"
+
+
+def blk_grain(p, src, blend_expr, pos_x, scale=40):
+    return [Tool(f"{p}Ruido", "FastNoise", {**frame_format(), "Detail": I(4), "Contrast": I(1.5), "XScale": I(scale),
+                                            "SeetheRate": I(1), "Discontinuous": I(1)}, pos=(pos_x, 66)),
+            merge(f"{p}Grano", src, f"{p}Ruido", (pos_x + 55, 0), "Overlay", blend=0.1, blend_expr=blend_expr)], f"{p}Grano"
+
+
+def blk_dust_scratch(p, src, host, pos_x):
+    """Polvo (motas oscuras que cambian cada fotograma) y rayas verticales intermitentes."""
+    t = "time"
+    return [
+        Tool(f"{p}Motas", "FastNoise", {**frame_format(), "Detail": I(8), "Contrast": I(2), "XScale": I(25),
+                                        "SeetheRate": I(3), "Discontinuous": I(1)}, pos=(pos_x, 99)),
+        Tool(f"{p}Umbral", "BrightnessContrast", {"Input": I(link=f"{p}Motas"), "Low": I(0.93), "High": I(1),
+                                                  "Saturation": I(0)}, pos=(pos_x + 55, 99)),
+        solid(f"{p}Blanco", (1, 1, 1), (pos_x + 55, 132)),
+        merge(f"{p}Invertir", f"{p}Blanco", f"{p}Umbral", (pos_x + 110, 99), "Difference"),
+        merge(f"{p}Polvo", src, f"{p}Invertir", (pos_x + 165, 0), "Multiply", blend=0.6, blend_expr=f"{host}.Polvo"),
+        Tool(f"{p}Linea", "RectangleMask", {**mask_format(), "Width": I(0.0015), "Height": I(3), "SoftEdge": I(0.001),
+                                            "Center": I((0.5, 0.5), f"Point(0.5 + 0.35*sin({t}*0.13)*sin({t}*0.071 + 1), 0.5)")},
+             pos=(pos_x + 165, -99)),
+        solid(f"{p}Raya", (0.95, 0.95, 0.9), (pos_x + 165, -66), mask=f"{p}Linea"),
+        merge(f"{p}Rayas", f"{p}Polvo", f"{p}Raya", (pos_x + 220, 0), blend=0,
+              blend_expr=f"{host}.Rayas*max(0, sin({t}*0.05))*max(0, sin({t}*0.05))"),
+    ], f"{p}Rayas"
+
+
+@register("Effects", "PRO_FX_Film_Proyector")
+def film_proyector(name, anim):
+    h = "Proyector"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0))]
+    t, last = blk_weave_breath("Mec", "Entrada", h, -330)
+    tools += t
+    t, last = blk_dust_scratch("Dano", last, h, -165)
+    tools += t
+    ucs = [uc("Weave", "Gate weave (vaivén)", 1, 0, 5), uc("Respiracion", "Respiración (parpadeo)", 1, 0, 5),
+           uc("Polvo", "Polvo", 0.6, 0, 1), uc("Rayas", "Rayas", 0.4, 0, 1),
+           uc("EscalaFormato", "Escala interna", 1, 0, 10, clamp=False)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Weave": I(1), "Respiracion": I(1),
+                                                "Polvo": I(0.6), "Rayas": I(0.4), "EscalaFormato": I(1)}, ucs, (110, 0)))
+    pubs = [pub(h, "Weave", "Gate weave (vaivén)", 1), pub(h, "Respiracion", "Respiración (parpadeo)", 1),
+            pub(h, "Polvo", "Polvo", 0.6), pub(h, "Rayas", "Rayas", 0.4)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Film_Completo")
+def film_completo(name, anim):
+    """Pila de emulacion de pelicula estilo Dehancer, con 'Formato (mm)' que escala grano/weave/respiracion."""
+    h = "Pelicula"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-550, 0))]
+    t, last = blk_weave_breath("Mec", "Entrada", h, -440)
+    tools += t
+    tools += [Tool("HalAltas", "BrightnessContrast", {"Input": I(link=last), "Low": I(0.75), "High": I(1),
+                                                       "Saturation": I(0.6)}, pos=(-330, -66)),
+              Tool("HalBlur", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(30),
+                                       "Input": I(link="HalAltas")}, pos=(-275, -66)),
+              solid("HalColor", (1, 0.25, 0.08), (-275, -99)),
+              merge("HalTenido", "HalBlur", "HalColor", (-220, -66), "Multiply"),
+              merge("Halation", last, "HalTenido", (-165, 0), "Screen", blend=0.3, blend_expr=f"{h}.Halation")]
+    t, last = blk_bloom("Bl", "Halation", -110, low=0.6, radius=60, blend=0.2)
+    tools += t
+    tools[-1].inputs["Blend"] = I(0.2, f"{h}.Bloom")
+    t, last = blk_grain("Gr", last, f"{h}.Grano*{h}.EscalaGrano", 110)
+    tools += t
+    t, last = blk_vignette("Vin", last, 220, amount=0.25)
+    tools += t
+    tools[-1].inputs["Blend"] = I(0.25, f"{h}.Vineta")
+    ucs = [uc("Formato", "Formato (mm): 8 / 16 / 35 / 65", 35, 8, 65),
+           uc("Grano", "Grano", 0.1, 0, 0.5), uc("Halation", "Halation", 0.3, 0, 1), uc("Bloom", "Bloom", 0.2, 0, 1),
+           uc("Weave", "Gate weave", 1, 0, 5), uc("Respiracion", "Respiración", 1, 0, 5), uc("Vineta", "Viñeta", 0.25, 0, 1),
+           uc("EscalaFormato", "Escala interna formato", 1, 0, 10, clamp=False),
+           uc("EscalaGrano", "Escala interna grano", 1, 0, 10, clamp=False)]
+    tools.append(Tool(h, "BrightnessContrast", {
+        "Input": I(link=last), "Formato": I(35), "Grano": I(0.1), "Halation": I(0.3), "Bloom": I(0.2),
+        "Weave": I(1), "Respiracion": I(1), "Vineta": I(0.25),
+        "EscalaFormato": I(1, f"min(4, 35/{h}.Formato)"),
+        "EscalaGrano": I(1, f"min(2.5, 0.4 + 0.6*35/{h}.Formato)")}, ucs, (330, 0)))
+    pubs = [pub(h, "Formato", "Formato (mm): 8 / 16 / 35 / 65", 35), pub(h, "Grano", "Grano", 0.1),
+            pub(h, "Halation", "Halation", 0.3), pub_color("HalColor", "Color de halation", (1, 0.25, 0.08), 4),
+            pub(h, "Bloom", "Bloom", 0.2), pub(h, "Weave", "Gate weave", 1), pub(h, "Respiracion", "Respiración", 1),
+            pub(h, "Vineta", "Viñeta", 0.25)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Lente_Flare")
+def lente_flare(name, anim):
+    """Destello de lente procedural: nucleo + raya + fantasmas alineados a traves del centro (estilo Sapphire)."""
+    n = "Nucleo"
+
+    def along(k):
+        return f"Point({n}.Center.X + (0.5 - {n}.Center.X)*{k}, {n}.Center.Y + (0.5 - {n}.Center.Y)*{k})"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)),
+             solid("Base", (0, 0, 0), (-330, -198)),
+             Tool(n, "EllipseMask", {**mask_format(), "Center": I((0.75, 0.75)), "Width": I(0.35), "Height": I(0.35),
+                                     "SoftEdge": I(0.25)}, pos=(-330, -264)),
+             solid("Luz", (1, 0.9, 0.75), (-275, -231), mask=n),
+             Tool("RayaMasc", "RectangleMask", {**mask_format(), "Width": I(2.5), "Height": I(0.003), "SoftEdge": I(0.006),
+                                                "Center": I((0.75, 0.75), f"Point({n}.Center.X, {n}.Center.Y)")},
+                  pos=(-220, -264)),
+             solid("Raya", (0.5, 0.7, 1), (-220, -231), mask="RayaMasc"),
+             merge("F1", "Base", "Luz", (-275, -198), "Screen"),
+             merge("F2", "F1", "Raya", (-220, -198), "Screen", blend=0.8)]
+    ghosts = [(0.6, 0.08, (0.3, 0.8, 0.5)), (1.3, 0.05, (0.6, 0.4, 1)), (1.7, 0.14, (1, 0.6, 0.3)), (2.2, 0.22, (0.3, 0.5, 1))]
+    last = "F2"
+    for i, (k, size, col) in enumerate(ghosts, 1):
+        x = -165 + 55 * i
+        tools += [Tool(f"G{i}Masc", "EllipseMask", {**mask_format(), "Center": I((0.5, 0.5), along(k)),
+                                                    "Width": I(size), "Height": I(size), "SoftEdge": I(size * 0.4)},
+                       pos=(x, -264)),
+                  solid(f"G{i}", col, (x, -231), mask=f"G{i}Masc"),
+                  merge(f"F{i + 2}", last, f"G{i}", (x, -198), "Screen", blend=0.35)]
+        last = f"F{i + 2}"
+    tools.append(merge("Destello", "Entrada", last, (110, 0), "Screen", blend=0.8))
+    pubs = [pub(n, "Center", "Posición del destello (animable)"), pub("Destello", "Blend", "Intensidad", 0.8),
+            pub(n, "Width", "Tamaño del núcleo", 0.35), pub_color("Luz", "Color del núcleo", (1, 0.9, 0.75), 4),
+            pub("F2", "Blend", "Raya anamórfica", 0.8), pub_color("Raya", "Color de la raya", (0.5, 0.7, 1), 9),
+            pub("F3", "Blend", "Fantasma 1", 0.35), pub("F4", "Blend", "Fantasma 2", 0.35),
+            pub("F5", "Blend", "Fantasma 3", 0.35), pub("F6", "Blend", "Fantasma 4", 0.35)]
+    return macro(name, [("Entrada", "Input")], pubs, "Destello", tools)
+
+
+@register("Effects", "PRO_FX_Retro_VHS")
+def retro_vhs(name, anim):
+    h = "VHS"
+    t = "time"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-550, 0)),
+             Tool("Temblor", "Transform", {"Input": I(link="Entrada"), "Center": I(
+                 (0.5, 0.5), f"Point(0.5 + {h}.Temblor*0.0015*sin({t}*13.7)*sin({t}*5.3), 0.5)")}, pos=(-440, 0)),
+             Tool("Corrido", "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0), "XBlurSize": I(10),
+                                      "YBlurSize": I(0), "Input": I(link="Temblor")}, pos=(-385, -66)),
+             merge("Croma", "Temblor", "Corrido", (-330, 0), "Color", blend=0.7)]
+    sep = f"{h}.Separacion"
+    t2, last = blk_channel_shift("Sep", "Croma", sep, "0", -275)
+    tools += t2
+    tools += [Tool("Cinta", "BrightnessContrast", {"Input": I(link=last), "Lift": I(0.05), "Gain": I(1.05),
+                                                   "Saturation": I(1.2), "Contrast": I(0.05)}, pos=(0, 0))]
+    t2, last = blk_grain("Ru", "Cinta", None, 55, scale=60)
+    tools += t2
+    tools[-1].inputs["Blend"] = I(0.15)
+    tools += [Tool("BandaMasc", "RectangleMask", {**mask_format(), "Width": I(3), "Height": I(0.05), "SoftEdge": I(0.03),
+                                                  "Center": I((0.5, 0.5), f"Point(0.5, 0.5 + 0.6*sin({t}*0.02*{h}.VelBanda))")},
+                   pos=(165, -99)),
+              Tool("BandaDesp", "Transform", {"Input": I(link=last), "Center": I((0.51, 0.5))}, pos=(165, -66)),
+              Tool("BandaLuz", "BrightnessContrast", {"Input": I(link="BandaDesp"), "Gain": I(1.3)}, pos=(220, -66)),
+              merge("Banda", last, "BandaLuz", (275, 0), blend=0.8,
+                    extra={"EffectMask": I(link="BandaMasc", out="Mask")})]
+    ucs = [uc("Temblor", "Temblor horizontal", 1, 0, 5), uc("Separacion", "Separación de color", 0.003, 0, 0.02),
+           uc("VelBanda", "Velocidad de la banda", 1, 0, 5)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Banda"), "Temblor": I(1), "Separacion": I(0.003),
+                                                "VelBanda": I(1)}, ucs, (385, 0)))
+    pubs = [pub(h, "Temblor", "Temblor horizontal", 1), pub(h, "Separacion", "Separación de color", 0.003),
+            pub("Croma", "Blend", "Corrimiento de color", 0.7), pub("RuGrano", "Blend", "Ruido", 0.15),
+            pub("Banda", "Blend", "Banda de tracking", 0.8), pub(h, "VelBanda", "Velocidad de la banda", 1),
+            pub("Cinta", "Saturation", "Saturación", 1.2)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Transitions", "PRO_TR_Glitch")
+def tr_glitch(name, anim):
+    h = "Mezcla"
+    p, t = f"{h}.Progreso", "time"
+    bell = f"sin({p}*{PI})*sin({p}*{PI})"
+    mix = clamp01(f"2*{p} - 0.5 + 0.8*sin({t}*5.1)*sin({t}*2.3 + 1)*sin({p}*{PI})")
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Glitch", "Intensidad del glitch", 1, 0, 3)]
+    tools = [Tool(h, "Dissolve", {"Mix": I(0, mix), "Progreso": I(link=anim, out="Value"), "Glitch": I(1)}, ucs, (0, 0))]
+    t2, last = blk_channel_shift("Sep", h, f"{h}.Glitch*0.012*{bell}", "0", 55)
+    tools += t2
+    for i, (y, spd, off) in enumerate(((0.3, 3.3, 0.06), (0.7, 4.7, -0.08)), 1):
+        tools += [Tool(f"Corte{i}Masc", "RectangleMask", {**mask_format(), "Width": I(3), "Height": I(0.07),
+                                                         "Center": I((0.5, y), f"Point(0.5, {y} + 0.25*sin({t}*{spd}))")},
+                       pos=(330, -99 - 33 * i)),
+                  Tool(f"Corte{i}Desp", "Transform", {"Input": I(link=last), "Center": I(
+                      (0.5, 0.5), f"Point(0.5 + {h}.Glitch*{off}*{bell}*sin({t}*7.7 + {i}), 0.5)")}, pos=(330, -66 * i)),
+                  merge(f"Corte{i}", last, f"Corte{i}Desp", (385 + 55 * i, 0), blend=1,
+                        extra={"EffectMask": I(link=f"Corte{i}Masc", out="Mask")})]
+        last = f"Corte{i}"
+    pubs = [pub(h, "Glitch", "Intensidad del glitch", 1)]
+    return macro(name, [(h, "Background"), (h, "Foreground")], pubs, last, tools, anim)
+
+
+@register("Transitions", "PRO_TR_FilmBurn")
+def tr_filmburn(name, anim):
+    h = "Mezcla"
+    p = f"{h}.Progreso"
+    bell = f"sin({p}*{PI})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Quemado", "Intensidad del quemado", 1, 0, 2)]
+    tools = [Tool(h, "Dissolve", {"Mix": I(0, smooth(clamp01(f"({p} - 0.35)/0.3"))),
+                                  "Progreso": I(link=anim, out="Value"), "Quemado": I(1)}, ucs, (0, 0)),
+             Tool("Sobreexpo", "BrightnessContrast", {"Input": I(link=h),
+                                                      "Gain": I(1, f"1 + 1.5*{h}.Quemado*{bell}*{bell}")}, pos=(55, 0)),
+             Tool("QuemaMasc", "EllipseMask", {**mask_format(), "Center": I((0.3, 0.4)), "SoftEdge": I(0.8),
+                                               "Width": I(0.2, f"0.2 + 2.5*{bell}"), "Height": I(0.2, f"0.2 + 2.0*{bell}")},
+                  pos=(110, -99)),
+             solid("QuemaColor", (1, 0.45, 0.12), (110, -66), mask="QuemaMasc"),
+             Tool("NucleoMasc", "EllipseMask", {**mask_format(), "SoftEdge": I(0.5),
+                                                "Center": I((0.3, 0.4), "Point(QuemaMasc.Center.X, QuemaMasc.Center.Y)"),
+                                                "Width": I(0.1, f"0.1 + 1.2*{bell}*{bell}"), "Height": I(0.1, f"0.1 + 1.0*{bell}*{bell}")},
+                  pos=(165, -99)),
+             solid("NucleoColor", (1, 0.92, 0.75), (165, -66), mask="NucleoMasc"),
+             merge("Quemado1", "Sobreexpo", "QuemaColor", (165, 0), "Screen", blend=0, blend_expr=f"{h}.Quemado*{bell}"),
+             merge("Quemado2", "Quemado1", "NucleoColor", (220, 0), "Screen", blend=0, blend_expr=f"{h}.Quemado*{bell}*{bell}")]
+    pubs = [pub(h, "Quemado", "Intensidad del quemado", 1), pub("QuemaMasc", "Center", "Origen del quemado"),
+            pub_color("QuemaColor", "Color del quemado", (1, 0.45, 0.12), 3)]
+    return macro(name, [(h, "Background"), (h, "Foreground")], pubs, "Quemado2", tools, anim)
+
+
+# ======================================================================= TRANSICIONES DE CINTA (lote 5)
+def film_host(h, anim, pos, extra_ucs=(), extra_inputs=None, danos=1.0):
+    """Herramienta final que aloja Progreso y los danos de pelicula, escalados por una campana (maximo a mitad)."""
+    bell = f"sin({h}.Progreso*{PI})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Danos", "Daños de película", danos, 0, 3), *extra_ucs,
+           uc("Polvo", "Polvo interno", 0, 0, 1, clamp=False), uc("Rayas", "Rayas internas", 0, 0, 1, clamp=False),
+           uc("Weave", "Weave interno", 0, 0, 10, clamp=False), uc("Respiracion", "Respiración interna", 0, 0, 10, clamp=False),
+           uc("EscalaFormato", "Escala interna", 1, 0, 10, clamp=False)]
+    inputs = {"Progreso": I(link=anim, out="Value"), "Danos": I(danos),
+              "Polvo": I(0, f"min(1, 0.8*{h}.Danos*{bell})"), "Rayas": I(0, f"min(1, 0.7*{h}.Danos*{bell})"),
+              "Weave": I(0, f"3*{h}.Danos*{bell}"), "Respiracion": I(0, f"4*{h}.Danos*{bell}"),
+              "EscalaFormato": I(1)}
+    inputs.update(extra_inputs or {})
+    return ucs, inputs
+
+
+@register("Transitions", "PRO_TR_SaltoCinta")
+def tr_salto_cinta(name, anim):
+    """El fotograma se 'escapa' en el proyector: A sube, aparece la linea negra entre fotogramas y entra B."""
+    h = "Pelicula"
+    p = f"{h}.Progreso"
+    env, gap, d = smooth(p), f"(1 + {h}.Linea)", f"{h}.Direccion"
+    bell = f"sin({p}*{PI})"
+    tools = [Tool("Saliente", "Transform", {"Center": I((0.5, 0.5), f"Point(0.5, 0.5 + {d}*{env}*{gap})")}, pos=(-330, -33)),
+             Tool("Entrante", "Transform", {"Center": I((0.5, 0.5), f"Point(0.5, 0.5 - {d}*(1 - {env})*{gap})")}, pos=(-330, 33)),
+             solid("Negro", (0, 0, 0), (-275, -99)),
+             merge("ConA", "Negro", "Saliente", (-220, 0)),
+             merge("ConB", "ConA", "Entrante", (-165, 0)),
+             Tool("Arrastre", "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0), "XBlurSize": I(0),
+                                       "YBlurSize": I(0, f"{h}.Desenfoque*{bell}*{bell}"), "Input": I(link="ConB")}, pos=(-110, 0)),
+             Tool("Parpadeo", "BrightnessContrast", {"Input": I(link="Arrastre"),
+                                                     "Gain": I(1, f"1 + 0.5*{h}.Danos*{bell}*sin(time*9.1)*sin(time*3.7 + 1)")}, pos=(-55, 0))]
+    t, last = blk_dust_scratch("Dano", "Parpadeo", h, 0)
+    tools += t
+    ucs, inputs = film_host(h, anim, (330, 0), extra_ucs=[
+        uc("Linea", "Línea de fotograma", 0.08, 0, 0.3), uc("Desenfoque", "Desenfoque de arrastre", 60, 0, 200),
+        uc("Direccion", "Dirección (1 arriba / -1 abajo)", 1, -1, 1, integer=True)],
+        extra_inputs={"Linea": I(0.08), "Desenfoque": I(60), "Direccion": I(1)})
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), **inputs}, ucs, (330, 0)))
+    pubs = [pub(h, "Linea", "Línea de fotograma", 0.08), pub(h, "Desenfoque", "Desenfoque de arrastre", 60),
+            pub(h, "Direccion", "Dirección (1 arriba / -1 abajo)", 1), pub(h, "Danos", "Daños de película", 1)]
+    return macro(name, [("Saliente", "Input"), ("Entrante", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_CintaPelicula")
+def tr_cinta_pelicula(name, anim):
+    """La imagen se aleja y se ve la tira de pelicula con perforaciones, que avanza un fotograma."""
+    h = "Pelicula"
+    p = f"{h}.Progreso"
+    bell = f"sin({p}*{PI})"
+    s = f"{h}.Escala"
+    env = smooth(p)
+    gap = "1.08"
+    tools = [Tool("Saliente", "Transform", {"Size": I(1, s), "Center": I((0.5, 0.5), f"Point(0.5, 0.5 + {env}*{gap}*{s})")}, pos=(-440, -33)),
+             Tool("Entrante", "Transform", {"Size": I(1, s), "Center": I((0.5, 0.5), f"Point(0.5, 0.5 - (1 - {env})*{gap}*{s})")}, pos=(-440, 33)),
+             solid("Negro", (0, 0, 0), (-385, -132))]
+    # perforaciones: dos cadenas de mascaras (izquierda / derecha) que avanzan con la pelicula
+    offsets = [round(-1.28 + 0.16 * i, 2) for i in range(17)]
+    for side, sx in (("Izq", -0.56), ("Der", 0.56)):
+        prev = None
+        for i, c in enumerate(offsets):
+            mname = f"Perf{side}{i}"
+            inputs = {**mask_format(), "CornerRadius": I(0.3),
+                      "Center": I((0.5, 0.5), f"Point(0.5 + {sx}*{s}, 0.5 + {s}*({c} + {env}*{gap}))"),
+                      "Width": I(0.035, f"0.035*{s}"), "Height": I(0.05, f"0.05*{s}")}
+            if prev:
+                inputs["EffectMask"] = I(link=prev, out="Mask")
+            tools.append(Tool(mname, "RectangleMask", inputs, pos=(-385 + 11 * i, -231 if side == "Izq" else -198)))
+            prev = mname
+        tools.append(solid(f"Luz{side}", (0.92, 0.88, 0.78), (-220, -165 if side == "Izq" else -132), mask=prev))
+    tools += [merge("ConPerfI", "Negro", "LuzIzq", (-165, -99)),
+              merge("ConPerfD", "ConPerfI", "LuzDer", (-110, -99)),
+              merge("ConA", "ConPerfD", "Saliente", (-55, 0)),
+              merge("ConB", "ConA", "Entrante", (0, 0)),
+              Tool("Parpadeo", "BrightnessContrast", {"Input": I(link="ConB"),
+                                                      "Gain": I(1, f"1 + 0.4*{h}.Danos*{bell}*sin(time*9.1)*sin(time*3.7 + 1)")}, pos=(55, 0))]
+    t, last = blk_dust_scratch("Dano", "Parpadeo", h, 110)
+    tools += t
+    ucs, inputs = film_host(h, anim, (440, 0), extra_ucs=[
+        uc("Alejamiento", "Alejamiento", 0.3, 0, 0.6), uc("Escala", "Escala interna", 1, 0, 2, clamp=False)],
+        extra_inputs={"Alejamiento": I(0.3), "Escala": I(1, f"1 - {h}.Alejamiento*{bell}")})
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), **inputs}, ucs, (440, 0)))
+    pubs = [pub(h, "Alejamiento", "Alejamiento", 0.3), pub(h, "Danos", "Daños de película", 1),
+            pub_color("LuzIzq", "Color de la luz en perforaciones", (0.92, 0.88, 0.78), 3)]
+    return macro(name, [("Saliente", "Input"), ("Entrante", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_QuemaOrganica")
+def tr_quema_organica(name, anim):
+    """Quemado con formas organicas (ruido umbralizado) + sobreexposicion + danos y vaiven de pelicula."""
+    h = "Pelicula"
+    p = f"{h}.Progreso"
+    bell = f"sin({p}*{PI})"
+    q = f"{h}.Quemado"
+    tools = [Tool("Mezcla", "Dissolve", {"Mix": I(0, smooth(clamp01(f"({p} - 0.4)/0.2")))}, pos=(-440, 0))]
+    t, last = blk_weave_breath("Mec", "Mezcla", h, -385)
+    tools += t
+    tools += [Tool("Expo", "BrightnessContrast", {"Input": I(link=last), "Gain": I(1, f"1 + 1.2*{q}*{bell}*{bell}")}, pos=(-275, 0)),
+              Tool("Fuego", "FastNoise", {**frame_format(), "Detail": I(6), "Contrast": I(1.6), "XScale": I(2.5),
+                                          "SeetheRate": I(0.03)}, pos=(-275, -132)),
+              Tool("Borde", "BrightnessContrast", {"Input": I(link="Fuego"), "Saturation": I(0),
+                                                   "Low": I(1, f"1 - 0.9*{q}*{bell}"), "High": I(1.08, "Borde.Low + 0.08")}, pos=(-220, -132)),
+              Tool("BordeBlur", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(12), "Input": I(link="Borde")}, pos=(-165, -132)),
+              solid("ColorFuego", (1, 0.42, 0.1), (-165, -165)),
+              merge("FuegoTenido", "BordeBlur", "ColorFuego", (-110, -132), "Multiply"),
+              Tool("Nucleo", "BrightnessContrast", {"Input": I(link="Fuego"), "Saturation": I(0),
+                                                    "Low": I(1, f"1 - 0.7*{q}*{bell}*{bell}"), "High": I(1.05, "Nucleo.Low + 0.05")}, pos=(-220, -66)),
+              solid("ColorNucleo", (1, 0.93, 0.78), (-165, -33)),
+              merge("NucleoTenido", "Nucleo", "ColorNucleo", (-110, -66), "Multiply"),
+              merge("Quema1", "Expo", "FuegoTenido", (-55, 0), "Screen"),
+              merge("Quema2", "Quema1", "NucleoTenido", (0, 0), "Screen")]
+    t, last = blk_dust_scratch("Dano", "Quema2", h, 55)
+    tools += t
+    ucs, inputs = film_host(h, anim, (385, 0), extra_ucs=[uc("Quemado", "Intensidad del quemado", 1, 0, 1.5)],
+                            extra_inputs={"Quemado": I(1)})
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), **inputs}, ucs, (385, 0)))
+    pubs = [pub(h, "Quemado", "Intensidad del quemado", 1), pub(h, "Danos", "Daños de película", 1),
+            pub_color("ColorFuego", "Color del borde quemado", (1, 0.42, 0.1), 3),
+            pub("Fuego", "XScale", "Tamaño de las manchas (más alto = más pequeñas)", 2.5)]
+    return macro(name, [("Mezcla", "Background"), ("Mezcla", "Foreground")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_FlashFotogramas")
+def tr_flash_fotogramas(name, anim):
+    """Final de rollo: parpadeo rapido entre A y B, fotogramas sobreexpuestos, saltos y danos."""
+    h = "Pelicula"
+    p = f"{h}.Progreso"
+    bell = f"sin({p}*{PI})"
+    mix = clamp01(f"({p} - 0.5)*8 + 3*sin(time*2.9)*sin(time*1.7 + 1)*{bell}")
+    tools = [Tool("Mezcla", "Dissolve", {"Mix": I(0, mix)}, pos=(-385, 0)),
+             Tool("Salto", "Transform", {"Input": I(link="Mezcla"), "Center": I(
+                 (0.5, 0.5), f"Point(0.5, 0.5 + {h}.Saltos*0.04*{bell}*sin(time*3.7)*sin(time*1.9 + 2))"),
+                 "Size": I(1, f"1 + {h}.Saltos*0.04*{bell}")}, pos=(-330, 0)),
+             Tool("Destellos", "BrightnessContrast", {"Input": I(link="Salto"), "Gain": I(
+                 1, f"1 + {h}.Flashes*{bell}*6*max(0, sin(time*4.1)*sin(time*1.3 + 2))")}, pos=(-275, 0))]
+    t, last = blk_weave_breath("Mec", "Destellos", h, -220)
+    tools += t
+    t, last = blk_dust_scratch("Dano", last, h, -110)
+    tools += t
+    ucs, inputs = film_host(h, anim, (220, 0), extra_ucs=[
+        uc("Flashes", "Destellos", 1, 0, 2), uc("Saltos", "Saltos de fotograma", 1, 0, 3)],
+        extra_inputs={"Flashes": I(1), "Saltos": I(1)})
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), **inputs}, ucs, (220, 0)))
+    pubs = [pub(h, "Flashes", "Destellos", 1), pub(h, "Saltos", "Saltos de fotograma", 1),
+            pub(h, "Danos", "Daños de película", 1)]
+    return macro(name, [("Mezcla", "Background"), ("Mezcla", "Foreground")], pubs, h, tools, anim)
+
+
+# ======================================================================= REELS / SOCIAL (lote 6)
+def ease_back(t, host):
+    """easeOutBack con 'Rebote' (0 = easeOutCubic sin rebote)."""
+    c = f"(1.70158*{host}.Rebote)"
+    return f"(1 + ({c} + 1)*({t} - 1)*({t} - 1)*({t} - 1) + {c}*({t} - 1)*({t} - 1))"
+
+
+def pingpong_bg(name, end_expr, pos, stops=((0, (0, 0, 0, 1)), (1, (1, 1, 1, 1)))):
+    """Gradiente lineal repetido en ping-pong (onda triangular 0..1) desde el centro."""
+    from fusion_builder import gradient
+    return Tool(name, "Background", {**frame_format(), "Type": I(FuID("Gradient")), "Repeat": I(FuID("Ping-Pong")),
+                                     "Start": I((0.5, 0.5)), "End": I((0.5, 0.55), end_expr),
+                                     "Gradient": I(gradient(stops))}, pos=pos)
+
+
+@register("Effects", "PRO_FX_Social_SombraLarga")
+def sombra_larga(name, anim):
+    """Sombra larga direccional para PNG recortados (estilo 'deep shadow')."""
+    h = "Sombra"
+    a = f"{h}.Angulo*{PI}/180"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)),
+             Tool("Silueta", "BrightnessContrast", {"Input": I(link="Entrada"), "Gain": I(0)}, pos=(-385, -66)),
+             solid("Vacio", (0, 0, 0), (-330, -132), alpha=0)]
+    last = "Vacio"
+    n = 6
+    for k in range(1, n + 1):
+        f = k / n
+        tools += [Tool(f"Paso{k}", "Transform", {"Input": I(link="Silueta"), "Center": I(
+                      (0.5, 0.5), f"Point(0.5 + {h}.Distancia*{f:g}*sin({a} + 1.5707963)/{h}.Aspecto, 0.5 + {h}.Distancia*{f:g}*sin({a}))")},
+                       pos=(-330 + 33 * k, -99)),
+                  merge(f"Capa{k}", last, f"Paso{k}", (-330 + 33 * k, -66), blend=1,
+                        blend_expr=f"max(0, 1 - {h}.Decaimiento*{f:g})")]
+        last = f"Capa{k}"
+    tools += [Tool("Suaviza", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(6), "Input": I(link=last)}, pos=(0, -66)),
+              merge("Opacidad", "Vacio", "Suaviza", (55, -66), blend=0.6)]
+    ucs = [uc("Angulo", "Ángulo (grados)", -45, -180, 180), uc("Distancia", "Longitud", 0.08, 0, 0.5),
+           uc("Decaimiento", "Decaimiento", 0.7, 0, 1), uc("Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625, 0.4, 3)]
+    tools.append(merge(h, "Opacidad", "Entrada", (110, 0), ucs=ucs, extra={
+        "Angulo": I(-45), "Distancia": I(0.08), "Decaimiento": I(0.7), "Aspecto": I(0.5625)}))
+    pubs = [pub(h, "Angulo", "Ángulo (grados)", -45), pub(h, "Distancia", "Longitud", 0.08),
+            pub(h, "Decaimiento", "Decaimiento", 0.7), pub("Opacidad", "Blend", "Opacidad", 0.6),
+            pub("Suaviza", "XBlurSize", "Suavidad", 6), pub(h, "Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Social_Halftone")
+def halftone(name, anim):
+    """Trama de puntos: los puntos crecen donde la imagen es oscura."""
+    h = "Trama"
+    cell = f"{h}.Tamano"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)),
+             Tool("Luma", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(0), "Contrast": I(0.1)}, pos=(-385, -66)),
+             pingpong_bg("OndaX", f"Point(0.5 + {cell}/2/{h}.Aspecto, 0.5)", (-385, -165)),
+             pingpong_bg("OndaY", f"Point(0.5, 0.5 + {cell}/2)", (-330, -165)),
+             merge("Puntos", "OndaX", "OndaY", (-330, -132), "Multiply"),
+             solid("Blanco", (1, 1, 1), (-275, -198)),
+             merge("PuntosInv", "Blanco", "Puntos", (-275, -132), "Difference"),
+             merge("Suma", "Luma", "PuntosInv", (-220, -66), extra={"SubtractiveAdditive": I(0)}),
+             Tool("Binario", "BrightnessContrast", {"Input": I(link="Suma"), "Low": I(0.97), "High": I(1.03)}, pos=(-165, -66)),
+             Tool("Color", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(1)}, pos=(-165, 0))]
+    ucs = [uc("Tamano", "Tamaño de la trama", 0.012, 0.003, 0.05), uc("Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625, 0.4, 3)]
+    tools.append(merge(h, "Color", "Binario", (-110, 0), "Multiply", blend=1, ucs=ucs,
+                       extra={"Tamano": I(0.012), "Aspecto": I(0.5625)}))
+    pubs = [pub(h, "Tamano", "Tamaño de la trama", 0.012), pub(h, "Blend", "Intensidad", 1),
+            pub("Color", "Saturation", "Saturación (0 = blanco y negro)", 1),
+            pub("Binario", "Low", "Umbral", 0.97), pub(h, "Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Anim_Flow")
+def anim_flow(name, anim):
+    """Animacion de entrada/salida para PNG y clips: desplazamiento, zoom, giro, rebote, desenfoque y fundido."""
+    h = "Anim"
+    p = f"{h}.Progreso"
+    t_in = clamp01(f"{p}/{h}.Duracion")
+    t_out = clamp01(f"(1 - {p})/{h}.Duracion")
+    a = f"{h}.Direccion*{PI}/180"
+    inv = f"(1 - {h}.E)"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1),
+           uc("Salida", "Modo salida (desmarcado = entrada)", 0, 0, 1, checkbox=True),
+           uc("Duracion", "Duración (% del clip)", 0.25, 0.02, 1),
+           uc("Direccion", "Dirección (grados, 180 = desde la izquierda)", 180, -180, 180),
+           uc("Distancia", "Distancia", 0.6, 0, 2), uc("Zoom", "Zoom (-1 = pop desde 0)", 0, -1, 2),
+           uc("Giro", "Giro (grados)", 0, -180, 180), uc("Rebote", "Rebote", 1, 0, 3),
+           uc("Fundido", "Fundido", 0, 0, 1), uc("Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625, 0.4, 3),
+           uc("T", "t interno", 0, 0, 1, clamp=False), uc("E", "Curva interna", 1, -1, 2, clamp=False)]
+    tools = [Tool("Mover", "Transform", {
+                 "Center": I((0.5, 0.5), f"Point(0.5 + {h}.Distancia*sin({a} + 1.5707963)/{h}.Aspecto*{inv}, 0.5 + {h}.Distancia*sin({a})*{inv})"),
+                 "Size": I(1, f"max(0, 1 + {h}.Zoom*{inv})"), "Angle": I(0, f"{h}.Giro*{inv}")}, pos=(-220, 0)),
+             Tool("Estela", "Blur", {"Filter": I(FuID("Fast Gaussian")), "Input": I(link="Mover"),
+                                     "XBlurSize": I(0, f"{h}.Desenfoque*max(0, {inv})")}, pos=(-110, 0)),
+             solid("Vacio", (0, 0, 0), (-110, -66), alpha=0)]
+    ucs.insert(9, uc("Desenfoque", "Desenfoque de movimiento", 15, 0, 100))
+    tools.append(merge(h, "Vacio", "Estela", (0, 0), blend=1,
+                       blend_expr=f"1 - {h}.Fundido*(1 - min(1, 2*{h}.T))", ucs=ucs, extra={
+        "Progreso": I(link=anim, out="Value"), "Salida": I(0), "Duracion": I(0.25), "Direccion": I(180),
+        "Distancia": I(0.6), "Zoom": I(0), "Giro": I(0), "Rebote": I(1), "Fundido": I(0), "Desenfoque": I(15),
+        "Aspecto": I(0.5625),
+        "T": I(0, f"(1 - {h}.Salida)*{t_in} + {h}.Salida*{t_out}"),
+        "E": I(1, ease_back(f"{h}.T", h))}))
+    pubs = [pub(h, "Salida", "Modo salida (desmarcado = entrada)", 0), pub(h, "Duracion", "Duración (% del clip)", 0.25),
+            pub(h, "Direccion", "Dirección (grados, 180 = desde la izquierda)", 180), pub(h, "Distancia", "Distancia", 0.6),
+            pub(h, "Zoom", "Zoom (-1 = pop desde 0)", 0), pub(h, "Giro", "Giro (grados)", 0), pub(h, "Rebote", "Rebote", 1),
+            pub(h, "Desenfoque", "Desenfoque de movimiento", 15), pub(h, "Fundido", "Fundido", 0),
+            pub(h, "Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625)]
+    return macro(name, [("Mover", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_Empuje")
+def tr_empuje(name, anim):
+    """Empuje entre escenas con desenfoque de movimiento y picos de glow y flash en el centro (estilo FlowShift)."""
+    h = "Empuje"
+    p = f"{h}.Progreso"
+    env = f"{h}.Env"
+    dx, dy = f"{h}.DirX", f"{h}.DirY"
+    bell2 = f"sin({p}*{PI})*sin({p}*{PI})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1),
+           uc("DirX", "Dirección X (-1 izquierda / 1 derecha)", -1, -1, 1, integer=True),
+           uc("DirY", "Dirección Y (-1 abajo / 1 arriba)", 0, -1, 1, integer=True),
+           uc("Desenfoque", "Desenfoque de movimiento", 60, 0, 200), uc("Glow", "Glow", 0.5, 0, 2),
+           uc("Flash", "Flash", 0.4, 0, 1),
+           uc("Raw", "Curva interna", 0, 0, 1, clamp=False), uc("Env", "Curva interna suave", 0, 0, 1, clamp=False)]
+
+    def blur(tname, pos):
+        return Tool(tname, "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0),
+                                    "XBlurSize": I(0, f"{h}.Desenfoque*{bell2}*{dx}*{dx}"),
+                                    "YBlurSize": I(0, f"{h}.Desenfoque*{bell2}*{dy}*{dy}")}, pos=pos)
+    tools = [blur("BlurA", (-330, -33)), blur("BlurB", (-330, 33)),
+             Tool("MoverA", "Transform", {"Input": I(link="BlurA"), "Center": I((0.5, 0.5), f"Point(0.5 + {dx}*{env}, 0.5 + {dy}*{env})")}, pos=(-275, -33)),
+             Tool("MoverB", "Transform", {"Input": I(link="BlurB"), "Center": I((0.5, 0.5), f"Point(0.5 - {dx}*(1 - {env}), 0.5 - {dy}*(1 - {env}))")}, pos=(-275, 33)),
+             merge("Juntos", "MoverA", "MoverB", (-220, 0)),
+             Tool("GlowAltas", "BrightnessContrast", {"Input": I(link="Juntos"), "Low": I(0.6), "High": I(1)}, pos=(-165, -66)),
+             Tool("GlowBlur", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(40), "Input": I(link="GlowAltas")}, pos=(-110, -66)),
+             merge("ConGlow", "Juntos", "GlowBlur", (-110, 0), "Screen", blend=0, blend_expr=f"{h}.Glow*{bell2}"),
+             solid("Blanco", (1, 1, 1), (-55, -66))]
+    tools.append(merge(h, "ConGlow", "Blanco", (0, 0), "Screen", blend=0, blend_expr=f"{h}.Flash*{bell2}*{bell2}", ucs=ucs, extra={
+        "Progreso": I(link=anim, out="Value"), "DirX": I(-1), "DirY": I(0), "Desenfoque": I(60), "Glow": I(0.5), "Flash": I(0.4),
+        "Raw": I(0, smooth(p)), "Env": I(0, smooth(f"{h}.Raw"))}))
+    pubs = [pub(h, "DirX", "Dirección X (-1 izquierda / 1 derecha)", -1), pub(h, "DirY", "Dirección Y (-1 abajo / 1 arriba)", 0),
+            pub(h, "Desenfoque", "Desenfoque de movimiento", 60), pub(h, "Glow", "Glow", 0.5), pub(h, "Flash", "Flash", 0.4)]
+    return macro(name, [("BlurA", "Input"), ("BlurB", "Input")], pubs, h, tools, anim)
+
+
+@register("Titles", "PRO_TTL_Social_AnilloGiratorio")
+def anillo(name, anim):
+    """Anillo de guiones que gira sin parar (fondo de producto en reels)."""
+    h = "Anillo"
+    n = 24
+    tools = [solid("Lienzo", (0, 0, 0), (-330, 0), alpha=0)]
+    prev = None
+    for i in range(n):
+        ai = 2 * 3.14159265 * i / n
+        th = f"({ai:.5f} + time*{h}.Velocidad*0.02)"
+        inputs = {**mask_format(),
+                  "Center": I((0.5, 0.5), f"Point(0.5 + {h}.Radio*sin({th} + 1.5707963)/{h}.Aspecto, 0.5 + {h}.Radio*sin({th}))"),
+                  "Angle": I(0, f"{th}*57.29578 + 90"),
+                  "Width": I(0.03, f"{h}.Largo"), "Height": I(0.006, f"{h}.Grosor")}
+        if prev:
+            inputs["EffectMask"] = I(link=prev, out="Mask")
+        tools.append(Tool(f"Guion{i}", "RectangleMask", inputs, pos=(-275 + 11 * i, -99)))
+        prev = f"Guion{i}"
+    tools += [solid("ColorAnillo", (0.1, 0.1, 0.1), (0, -66), mask=prev),
+              merge("Union", "Lienzo", "ColorAnillo", (55, 0))]
+    ucs = [uc("Radio", "Radio", 0.2, 0.02, 0.6), uc("Velocidad", "Velocidad (negativo = al otro lado)", 1, -10, 10),
+           uc("Largo", "Largo del guion", 0.03, 0.002, 0.2), uc("Grosor", "Grosor del guion", 0.006, 0.001, 0.05),
+           uc("Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625, 0.4, 3)]
+    tools.append(Tool(h, "Transform", {"Input": I(link="Union"), "Radio": I(0.2), "Velocidad": I(1), "Largo": I(0.03),
+                                       "Grosor": I(0.006), "Aspecto": I(0.5625)}, ucs, (110, 0)))
+    pubs = [pub(h, "Radio", "Radio", 0.2), pub(h, "Velocidad", "Velocidad (negativo = al otro lado)", 1),
+            pub(h, "Largo", "Largo del guion", 0.03), pub(h, "Grosor", "Grosor del guion", 0.006),
+            pub_color("ColorAnillo", "Color", (0.1, 0.1, 0.1), 5), pub(h, "Center", "Posición"),
+            pub(h, "Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625)]
+    return macro(name, [], pubs, h, tools)
+
+
+@register("Generators", "PRO_GEN_Social_Cuadricula")
+def cuadricula(name, anim):
+    """Fondo de papel cuadriculado que se desvanece hacia los bordes."""
+    h = "Cuadricula"
+    cell = f"{h}.Celda"
+    tools = [pingpong_bg("LineasH", f"Point(0.5, 0.5 + {cell}/2)", (-330, -66)),
+             pingpong_bg("LineasV", f"Point(0.5 + {cell}/2/{h}.Aspecto, 0.5)", (-330, 66)),
+             Tool("FinoH", "BrightnessContrast", {"Input": I(link="LineasH"), "Low": I(0), "High": I(0.06, f"{h}.GrosorLinea")}, pos=(-275, -66)),
+             Tool("FinoV", "BrightnessContrast", {"Input": I(link="LineasV"), "Low": I(0), "High": I(0.06, f"{h}.GrosorLinea")}, pos=(-275, 66)),
+             merge("Rejilla", "FinoH", "FinoV", (-220, 0), "Multiply"),
+             solid("ColorFondo", (1, 1, 1), (-220, -132)),
+             solid("ColorLinea", (0.1, 0.1, 0.1), (-165, -132)),
+             solid("Blanco", (1, 1, 1), (-165, 99)),
+             merge("FondoTenido", "ColorFondo", "Rejilla", (-165, -66), "Multiply"),
+             merge("LineasInv", "Blanco", "Rejilla", (-165, 66), "Difference"),
+             merge("LineasTenidas", "LineasInv", "ColorLinea", (-110, 66), "Multiply"),
+             merge("Papel", "FondoTenido", "LineasTenidas", (-55, 0), "Screen"),
+             Tool("Desvanecer", "RectangleMask", {**mask_format(), "Width": I(0.9), "Height": I(0.9), "SoftEdge": I(0.15)}, pos=(0, -99)),
+             merge("ConMascara", "ColorFondo", "Papel", (0, 0), blend=1, extra={"EffectMask": I(link="Desvanecer", out="Mask")})]
+    ucs = [uc("Celda", "Tamaño de celda", 0.06, 0.01, 0.3), uc("GrosorLinea", "Grosor de línea", 0.06, 0.005, 0.5),
+           uc("Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625, 0.4, 3)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConMascara"), "Celda": I(0.06), "GrosorLinea": I(0.06),
+                                                "Aspecto": I(0.5625)}, ucs, (55, 0)))
+    pubs = [pub(h, "Celda", "Tamaño de celda", 0.06), pub(h, "GrosorLinea", "Grosor de línea", 0.06),
+            pub_color("ColorFondo", "Color del fondo", (1, 1, 1), 3), pub_color("ColorLinea", "Color de las líneas", (0.1, 0.1, 0.1), 6),
+            pub("ConMascara", "Blend", "Intensidad de la cuadrícula", 1), pub("Desvanecer", "SoftEdge", "Desvanecido en bordes", 0.15),
+            pub("Desvanecer", "Width", "Ancho visible", 0.9), pub("Desvanecer", "Height", "Alto visible", 0.9),
+            pub(h, "Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625)]
+    return macro(name, [], pubs, h, tools)
+
+
+@register("Titles", "PRO_TTL_Social_TextoPop")
+def texto_pop(name, anim):
+    """Texto que entra con rebote, sube y se funde (y sale al reves). Pensado para reels."""
+    h = "Pop"
+    p = f"{h}.Progreso"
+    t = clamp01(f"min({p}/{h}.Entrada, (1 - {p})/max({h}.Salida, 0.0001))")
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Entrada", "Duración entrada (% del clip)", 0.15, 0.01, 0.5),
+           uc("Salida", "Duración salida (% del clip)", 0.1, 0, 0.5), uc("Rebote", "Rebote", 1.2, 0, 3),
+           uc("T", "t interno", 1, 0, 1, clamp=False), uc("E", "Curva interna", 1, -1, 2, clamp=False)]
+    tools = [solid("Lienzo", (0, 0, 0), (-220, -66), alpha=0),
+             Tool("Texto", "TextPlus", {**frame_format(), "StyledText": I("TU TEXTO AQUÍ"), "Font": I("Arial"),
+                                        "Style": I("Bold"), "Size": I(0.09), "Red1": I(1), "Green1": I(1), "Blue1": I(1)},
+                  pos=(-220, 0)),
+             Tool("Escala", "Transform", {"Input": I(link="Texto"),
+                                          "Size": I(1, f"max(0, 0.6 + 0.4*{h}.E)"),
+                                          "Center": I((0.5, 0.5), f"Point(0.5, 0.5 - 0.04*(1 - {h}.E))")}, pos=(-110, 0))]
+    tools.append(merge(h, "Lienzo", "Escala", (0, 0), blend=1, blend_expr=f"min(1, 2*{h}.T)", ucs=ucs, extra={
+        "Progreso": I(link=anim, out="Value"), "Entrada": I(0.15), "Salida": I(0.1), "Rebote": I(1.2),
+        "T": I(1, t), "E": I(1, ease_back(f"{h}.T", h))}))
+    tools.append(Tool("Posicion", "Transform", {"Input": I(link=h)}, pos=(110, 0)))
+    pubs = [pub("Texto", "StyledText", "Texto"), pub("Texto", "Font", "Fuente", group=2), pub("Texto", "Style", group=2),
+            pub("Texto", "Size", "Tamaño", 0.09), pub_color("Texto", "Color", (1, 1, 1), 5, prefix="", suffix="1"),
+            pub("Posicion", "Center", "Posición"), pub(h, "Rebote", "Rebote", 1.2),
+            pub(h, "Entrada", "Duración entrada (% del clip)", 0.15), pub(h, "Salida", "Duración salida (% del clip)", 0.1)]
+    return macro(name, [], pubs, "Posicion", tools, anim)
+
+
+# ======================================================================= GRAFICOS ANIMADOS (lote 7)
+def kit(h, entrada=0.2, salida=0.12, extra_ucs=(), extra_inputs=None):
+    """Controles comunes de titulos: U = avance de la entrada (0..1), Xs = factor de salida suave (1..0)."""
+    p = f"{h}.Progreso"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Entrada", "Duración entrada (% del clip)", entrada, 0.01, 0.8),
+           uc("Salida", "Duración salida (% del clip, 0 = sin salida)", salida, 0, 0.5), *extra_ucs,
+           uc("U", "Avance interno", 1, 0, 1, clamp=False), uc("Xs", "Salida interna", 1, 0, 1, clamp=False)]
+    inputs = {"Progreso": I(link="PRO_ANIM", out="Value"), "Entrada": I(entrada), "Salida": I(salida),
+              "U": I(1, clamp01(f"{p}/{h}.Entrada")),
+              "Xs": I(1, smooth(clamp01(f"(1 - {p})/max({h}.Salida, 0.0001)")))}
+    inputs.update(extra_inputs or {})
+    return ucs, inputs
+
+
+def stage(h, a, b):
+    """Envolvente de una fase de la entrada (de a a b, fracciones de la entrada) por la salida."""
+    return f"{smooth(clamp01(f'({h}.U - {a:g})/{b - a:g}'))}*{h}.Xs"
+
+
+def text_tool(name, text, size, center, pos, rgb=(1, 1, 1), font="Arial", style="Bold", left=False, extra=None):
+    inputs = {**frame_format(), "Center": I(center), "StyledText": I(text), "Font": I(font), "Style": I(style),
+              "Size": I(size), "Red1": I(rgb[0]), "Green1": I(rgb[1]), "Blue1": I(rgb[2])}
+    if left:
+        inputs["HorizontalLeftCenterRight"] = I(-1)
+    inputs.update(extra or {})
+    return Tool(name, "TextPlus", inputs, pos=pos)
+
+
+def rect(name, pos, **kw):
+    """Mascara rectangular. kw: valores I(...) para Center, Width, Height, CornerRadius, Angle, Solid, BorderWidth, SoftEdge."""
+    return Tool(name, "RectangleMask", {**mask_format(), **kw}, pos=pos)
+
+
+def ellipse(name, pos, **kw):
+    return Tool(name, "EllipseMask", {**mask_format(), **kw}, pos=pos)
+
+
+def compose(layers, base="Lienzo", x0=0):
+    """Apila capas sobre el lienzo: layers = [(herramienta, expresion de opacidad o None)]."""
+    tools, last = [], base
+    for i, (fg, blend_expr) in enumerate(layers):
+        name = f"M{i + 1}"
+        tools.append(merge(name, last, fg, (x0 + 55 * i, 0), blend=1 if blend_expr else None, blend_expr=blend_expr))
+        last = name
+    return tools, last
+
+
+def title(name, h, ucs, inputs, body, layers, pubs, x_end=440):
+    """Lienzo transparente + cuerpo + capas + transform final que aloja los controles (Posicion/Escala)."""
+    tools = [solid("Lienzo", (0, 0, 0), (-440, 0), alpha=0)] + body
+    t, last = compose(layers, x0=110)
+    tools += t
+    tools.append(Tool(h, "Transform", {"Input": I(link=last), **inputs}, ucs, (x_end, 0)))
+    pubs = pubs + [pub(h, "Center", "Posición"), pub(h, "Size", "Escala", 1),
+                   pub(h, "Entrada", "Duración entrada (% del clip)", inputs["Entrada"].split("Value = ")[1].split(",")[0]),
+                   pub(h, "Salida", "Duración salida (% del clip, 0 = sin salida)", inputs["Salida"].split("Value = ")[1].split(",")[0])]
+    for p in pubs:
+        if isinstance(p, dict) and isinstance(p["default"], str):
+            p["default"] = float(p["default"])
+    anim = "PRO" + name.split("_", 2)[-1].replace("_", "") + "Anim"
+    return macro(name, [], pubs, h, tools, anim).replace('"PRO_ANIM"', f'"{anim}"')
+
+
+@register("Titles", "PRO_TTL_Barra_Progreso")
+def barra_progreso(name, anim):
+    h = "Barra"
+    p = f"{h}.Progreso"
+    ucs, inputs = kit(h, 0.05, 0.03, [uc("Ancho", "Ancho total", 0.8, 0.05, 1), uc("Alto", "Grosor", 0.012, 0.002, 0.1),
+                                      uc("PosY", "Altura en pantalla", 0.06, 0, 1), uc("Redondeo", "Redondeo", 0.5, 0, 1)],
+                      {"Ancho": I(0.8), "Alto": I(0.012), "PosY": I(0.06), "Redondeo": I(0.5)})
+    body = [rect("MascFondo", (-385, -99), Center=I((0.5, 0.06), f"Point(0.5, {h}.PosY)"), Width=I(0.8, f"{h}.Ancho"),
+                 Height=I(0.012, f"{h}.Alto"), CornerRadius=I(0.5, f"{h}.Redondeo")),
+            solid("Pista", (1, 1, 1), (-385, -66), alpha=0.25, mask="MascFondo"),
+            rect("MascRelleno", (-330, -99), Center=I((0.5, 0.06), f"Point(0.5 - {h}.Ancho/2 + {h}.Ancho*{p}/2, {h}.PosY)"),
+                 Width=I(0, f"{h}.Ancho*{p}"), Height=I(0.012, f"{h}.Alto"), CornerRadius=I(0.5, f"{h}.Redondeo")),
+            solid("Relleno", (1, 0.25, 0.25), (-330, -66), mask="MascRelleno")]
+    pubs = [pub_color("Pista", "Color de la pista", (1, 1, 1), 1), pub("Pista", "TopLeftAlpha", "Opacidad de la pista", 0.25),
+            pub_color("Relleno", "Color del relleno", (1, 0.25, 0.25), 5), pub(h, "Ancho", "Ancho total", 0.8),
+            pub(h, "Alto", "Grosor", 0.012), pub(h, "PosY", "Altura en pantalla", 0.06), pub(h, "Redondeo", "Redondeo", 0.5)]
+    return title(name, h, ucs, inputs, body, [("Pista", f"{h}.Xs*{stage(h, 0, 1)}"), ("Relleno", f"{h}.Xs")], pubs)
+
+
+@register("Titles", "PRO_TTL_Contador")
+def contador(name, anim):
+    h = "Contador"
+    t = clamp01(f"{h}.Progreso/{h}.Duracion")
+    e = f"(1 - (1 - {t})*(1 - {t})*(1 - {t}))"
+    ucs, inputs = kit(h, 0.1, 0.1, [uc("Inicio", "Valor inicial", 0, -1e6, 1e6, clamp=False),
+                                    uc("Fin", "Valor final", 1000, -1e6, 1e6, clamp=False),
+                                    uc("Duracion", "Duración del conteo (% del clip)", 0.6, 0.05, 1)],
+                      {"Inicio": I(0), "Fin": I(1000), "Duracion": I(0.6)})
+    body = [text_tool("Numero", "0", 0.14, (0.5, 0.55), (-385, -66),
+                      extra={"StyledText": I("0", f'Text(string.format("%.0f", {h}.Inicio + ({h}.Fin - {h}.Inicio)*{e}))')}),
+            text_tool("Etiqueta", "SEGUIDORES", 0.04, (0.5, 0.4), (-330, -66), rgb=(0.85, 0.85, 0.85), style="Regular",
+                      extra={"CharacterSpacing": I(1.3)})]
+    pubs = [pub(h, "Inicio", "Valor inicial", 0), pub(h, "Fin", "Valor final", 1000),
+            pub(h, "Duracion", "Duración del conteo (% del clip)", 0.6),
+            pub("Numero", "Font", "Fuente del número", group=4), pub("Numero", "Style", group=4),
+            pub_color("Numero", "Color del número", (1, 1, 1), 6, prefix="", suffix="1"),
+            pub("Etiqueta", "StyledText", "Etiqueta"), pub_color("Etiqueta", "Color de la etiqueta", (0.85, 0.85, 0.85), 10, prefix="", suffix="1")]
+    return title(name, h, ucs, inputs, body, [("Numero", stage(h, 0, 0.6)), ("Etiqueta", stage(h, 0.4, 1))], pubs)
+
+
+@register("Titles", "PRO_TTL_Callout_Flecha")
+def callout(name, anim):
+    h = "Callout"
+    a = f"{h}.Angulo*{PI}/180"
+    dx, dy = f"sin({a} + 1.5707963)", f"sin({a})*{h}.Aspecto"
+    sl = stage(h, 0.2, 0.7)
+    ucs, inputs = kit(h, 0.3, 0.12, [uc("Angulo", "Ángulo de la línea", 35, -180, 180), uc("Largo", "Largo de la línea", 0.18, 0.02, 0.6),
+                                     uc("Aspecto", "Aspecto del timeline (16:9 = 1.778)", 1.7778, 0.4, 3)],
+                      {"Angulo": I(35), "Largo": I(0.18), "Aspecto": I(1.7778)})
+    body = [ellipse("MascPunto", (-385, -132), Center=I((0.4, 0.4)), Width=I(0.014), Height=I(0.014)),
+            ellipse("MascAro", (-330, -132), Center=I((0.4, 0.4), "Point(MascPunto.Center.X, MascPunto.Center.Y)"),
+                    Width=I(0.03), Height=I(0.03), Solid=I(0), BorderWidth=I(0.002)),
+            rect("MascLinea", (-275, -132), Width=I(0, f"{h}.Largo*{sl}"), Height=I(0.0025), Angle=I(35, f"{h}.Angulo"),
+                 Center=I((0.5, 0.5), f"Point(MascPunto.Center.X + {dx}*{h}.Largo*{sl}/2, MascPunto.Center.Y + {dy}*{h}.Largo*{sl}/2)")),
+            solid("Punto", (1, 1, 1), (-385, -99), mask="MascPunto"),
+            solid("Aro", (1, 1, 1), (-330, -99), mask="MascAro"),
+            solid("Linea", (1, 1, 1), (-275, -99), mask="MascLinea"),
+            text_tool("Etiqueta", "Detalle importante", 0.04, (0.5, 0.5), (-220, -99), extra={
+                "Center": I((0.5, 0.5), f"Point(MascPunto.Center.X + {dx}*({h}.Largo + 0.02), MascPunto.Center.Y + {dy}*({h}.Largo + 0.02) + 0.02)")})]
+    pubs = [pub("MascPunto", "Center", "Punto señalado"), pub(h, "Angulo", "Ángulo de la línea", 35), pub(h, "Largo", "Largo de la línea", 0.18),
+            pub("Etiqueta", "StyledText", "Texto"), pub("Etiqueta", "Size", "Tamaño del texto", 0.04),
+            pub_color("Punto", "Color", (1, 1, 1), 7), pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778)", 1.7778)]
+    # el color del punto se replica en aro, linea y texto
+    for tname in ("Aro", "Linea"):
+        for ch in ("Red", "Green", "Blue"):
+            next(t for t in body if t.name == tname).inputs[f"TopLeft{ch}"] = I(1, f"Punto.TopLeft{ch}")
+    for ch in ("Red", "Green", "Blue"):
+        next(t for t in body if t.name == "Etiqueta").inputs[f"{ch}1"] = I(1, f"Punto.TopLeft{ch}")
+    layers = [("Punto", stage(h, 0, 0.3)), ("Aro", stage(h, 0.1, 0.4)), ("Linea", f"{h}.Xs"), ("Etiqueta", stage(h, 0.6, 1))]
+    return title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_EndScreen")
+def end_screen(name, anim):
+    h = "Final"
+    ucs, inputs = kit(h, 0.15, 0.08)
+    body = [text_tool("Titulo", "¡GRACIAS POR VER!", 0.06, (0.5, 0.86), (-385, -165)),
+            rect("MascVideo1", (-385, -132), Center=I((0.28, 0.55)), Width=I(0.36), Height=I(0.2025), CornerRadius=I(0.06),
+                 Solid=I(0), BorderWidth=I(0.003)),
+            rect("MascVideo2", (-330, -132), Center=I((0.72, 0.55)), Width=I(0.36), Height=I(0.2025), CornerRadius=I(0.06),
+                 Solid=I(0), BorderWidth=I(0.003)),
+            ellipse("MascCanal", (-275, -132), Center=I((0.5, 0.2)), Width=I(0.13), Height=I(0.13), Solid=I(0), BorderWidth=I(0.003)),
+            solid("Video1", (1, 1, 1), (-385, -99), mask="MascVideo1"),
+            solid("Video2", (1, 1, 1), (-330, -99), mask="MascVideo2"),
+            solid("Canal", (1, 1, 1), (-275, -99), mask="MascCanal"),
+            text_tool("Pie", "Suscríbete para más", 0.03, (0.5, 0.07), (-220, -99), style="Regular")]
+    for tname in ("Video2", "Canal"):
+        for ch in ("Red", "Green", "Blue"):
+            next(t for t in body if t.name == tname).inputs[f"TopLeft{ch}"] = I(1, f"Video1.TopLeft{ch}")
+    pubs = [pub("Titulo", "StyledText", "Título"), pub("Pie", "StyledText", "Texto inferior"),
+            pub("Titulo", "Font", "Fuente", group=3), pub("Titulo", "Style", group=3),
+            pub_color("Video1", "Color de los marcos", (1, 1, 1), 5), pub_color("Titulo", "Color del texto", (1, 1, 1), 8, prefix="", suffix="1")]
+    for ch in ("Red", "Green", "Blue"):
+        next(t for t in body if t.name == "Pie").inputs[f"{ch}1"] = I(1, f"Titulo.{ch}1")
+    layers = [("Titulo", stage(h, 0, 0.5)), ("Video1", stage(h, 0.2, 0.6)), ("Video2", stage(h, 0.35, 0.75)),
+              ("Canal", stage(h, 0.5, 0.9)), ("Pie", stage(h, 0.6, 1))]
+    return title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Suscribete")
+def suscribete(name, anim):
+    h = "CTA"
+    p = f"{h}.Progreso"
+    pulse = f"max(0, sin(({p} - 0.45)/0.1*{PI}))*min(1, max(0, ({p} - 0.45)*100))*min(1, max(0, (0.55 - {p})*100))"
+    ucs, inputs = kit(h, 0.15, 0.1, [uc("Rebote", "Rebote", 1.5, 0, 3), uc("E", "Curva interna", 1, -1, 2, clamp=False)],
+                      {"Rebote": I(1.5), "E": I(1, ease_back(f"{h}.U", h))})
+    body = [rect("MascBoton", (-385, -132), Center=I((0.5, 0.2)), Width=I(0.26), Height=I(0.065), CornerRadius=I(1)),
+            solid("Boton", (0.9, 0.1, 0.1), (-385, -99), mask="MascBoton"),
+            text_tool("Texto", "SUSCRÍBETE", 0.04, (0.5, 0.2), (-330, -99), extra={"CharacterSpacing": I(1.1)}),
+            merge("Pastilla", "Lienzo", "Boton", (-275, -66)),
+            merge("ConTexto", "Pastilla", "Texto", (-220, -66)),
+            Tool("Pop", "Transform", {"Input": I(link="ConTexto"), "Pivot": I((0.5, 0.2)), "Center": I((0.5, 0.2)),
+                                      "Size": I(1, f"max(0, {h}.E*{h}.Xs*(1 - 0.12*{pulse}))")}, pos=(-165, -66))]
+    pubs = [pub("Texto", "StyledText", "Texto"), pub_color("Boton", "Color del botón", (0.9, 0.1, 0.1), 2),
+            pub_color("Texto", "Color del texto", (1, 1, 1), 5, prefix="", suffix="1"), pub(h, "Rebote", "Rebote", 1.5)]
+    return title(name, h, ucs, inputs, body, [("Pop", None)], pubs)
+
+
+@register("Titles", "PRO_TTL_Cita")
+def cita(name, anim):
+    h = "Cita"
+    sl = stage(h, 0.3, 0.8)
+    ucs, inputs = kit(h, 0.25, 0.12)
+    body = [text_tool("Comillas", "“", 0.25, (0.5, 0.72), (-385, -132), rgb=(0.95, 0.75, 0.3), font="Georgia"),
+            text_tool("Frase", "La creatividad es la inteligencia\ndivirtiéndose.", 0.05, (0.5, 0.52), (-330, -132),
+                      font="Georgia", style="Italic"),
+            rect("MascRaya", (-275, -165), Center=I((0.5, 0.38)), Width=I(0, f"0.12*{sl}"), Height=I(0.002)),
+            solid("Raya", (0.95, 0.75, 0.3), (-275, -132), mask="MascRaya"),
+            text_tool("Autor", "ALBERT EINSTEIN", 0.028, (0.5, 0.33), (-220, -132), rgb=(0.8, 0.8, 0.8), style="Regular",
+                      extra={"CharacterSpacing": I(1.3)})]
+    for ch in ("Red", "Green", "Blue"):
+        next(t for t in body if t.name == "Raya").inputs[f"TopLeft{ch}"] = I(1, f"Comillas.{ch}1")
+    pubs = [pub("Frase", "StyledText", "Frase"), pub("Autor", "StyledText", "Autor"),
+            pub("Frase", "Font", "Fuente de la frase", group=3), pub("Frase", "Style", group=3),
+            pub("Frase", "Size", "Tamaño de la frase", 0.05),
+            pub_color("Comillas", "Color de acento", (0.95, 0.75, 0.3), 6, prefix="", suffix="1")]
+    layers = [("Comillas", stage(h, 0, 0.4)), ("Frase", stage(h, 0.15, 0.6)), ("Raya", f"{h}.Xs"), ("Autor", stage(h, 0.6, 1))]
+    return title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Titulo_Apertura")
+def titulo_apertura(name, anim):
+    h = "Apertura"
+    s_main = stage(h, 0, 1)
+    sl = stage(h, 0.3, 1)
+    ucs, inputs = kit(h, 0.35, 0.15, [uc("Tracking", "Separación inicial de letras", 0.4, 0, 2)], {"Tracking": I(0.4)})
+    body = [text_tool("Principal", "TÍTULO DE LA PELÍCULA", 0.075, (0.5, 0.52), (-385, -132), font="Georgia", style="Regular",
+                      extra={"CharacterSpacing": I(1, f"1 + {h}.Tracking*(1 - {s_main})")}),
+            text_tool("Sub", "UNA HISTORIA ORIGINAL", 0.025, (0.5, 0.42), (-330, -132), rgb=(0.8, 0.8, 0.8), style="Regular",
+                      extra={"CharacterSpacing": I(1.6)}),
+            rect("MascSup", (-275, -165), Center=I((0.5, 0.6)), Width=I(0, f"0.3*{sl}"), Height=I(0.0015)),
+            rect("MascInf", (-220, -165), Center=I((0.5, 0.385)), Width=I(0, f"0.3*{sl}"), Height=I(0.0015)),
+            solid("LineaSup", (1, 1, 1), (-275, -132), alpha=0.7, mask="MascSup"),
+            solid("LineaInf", (1, 1, 1), (-220, -132), alpha=0.7, mask="MascInf")]
+    pubs = [pub("Principal", "StyledText", "Título"), pub("Sub", "StyledText", "Subtítulo"),
+            pub("Principal", "Font", "Fuente", group=3), pub("Principal", "Style", group=3), pub("Principal", "Size", "Tamaño", 0.075),
+            pub_color("Principal", "Color", (1, 1, 1), 6, prefix="", suffix="1"), pub(h, "Tracking", "Separación inicial de letras", 0.4)]
+    layers = [("Principal", s_main), ("LineaSup", f"{h}.Xs"), ("LineaInf", f"{h}.Xs"), ("Sub", stage(h, 0.5, 1))]
+    return title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Separador")
+def separador(name, anim):
+    h = "Separador"
+    sl = stage(h, 0, 0.7)
+    ucs, inputs = kit(h, 0.25, 0.12, [uc("Largo", "Largo", 0.4, 0.02, 1)], {"Largo": I(0.4)})
+    body = [rect("MascLinea", (-385, -132), Center=I((0.5, 0.5)), Width=I(0, f"{h}.Largo*{sl}"), Height=I(0.0018)),
+            ellipse("MascIzq", (-330, -132), Center=I((0.5, 0.5), f"Point(0.5 - {h}.Largo*{sl}/2, 0.5)"), Width=I(0.008), Height=I(0.008)),
+            ellipse("MascDer", (-275, -132), Center=I((0.5, 0.5), f"Point(0.5 + {h}.Largo*{sl}/2, 0.5)"), Width=I(0.008), Height=I(0.008),
+                    EffectMask=I(link="MascIzq", out="Mask")),
+            solid("Linea", (1, 1, 1), (-385, -99), mask="MascLinea"),
+            solid("Puntos", (1, 1, 1), (-330, -99), mask="MascDer"),
+            text_tool("Texto", "CAPÍTULO UNO", 0.03, (0.5, 0.54), (-275, -99), style="Regular", extra={"CharacterSpacing": I(1.5)})]
+    for ch in ("Red", "Green", "Blue"):
+        next(t for t in body if t.name == "Puntos").inputs[f"TopLeft{ch}"] = I(1, f"Linea.TopLeft{ch}")
+    pubs = [pub("Texto", "StyledText", "Texto (vacío = solo línea)"), pub(h, "Largo", "Largo", 0.4),
+            pub_color("Linea", "Color de la línea", (1, 1, 1), 3), pub_color("Texto", "Color del texto", (1, 1, 1), 6, prefix="", suffix="1")]
+    layers = [("Linea", f"{h}.Xs"), ("Puntos", stage(h, 0, 0.3)), ("Texto", stage(h, 0.5, 1))]
+    return title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_LineaTiempo")
+def linea_tiempo(name, anim):
+    h = "Cronologia"
+    n = 5
+    xs = [0.15 + 0.7 * i / (n - 1) for i in range(n)]
+    years = ["1990", "2000", "2010", "2020", "2030"]
+    ucs, inputs = kit(h, 0.6, 0.1)
+    body = [rect("MascBase", (-385, -198), Center=I((0.5, 0.5), f"Point(0.15 + 0.35*{stage(h, 0, 0.3)}, 0.5)"),
+                 Width=I(0, f"0.7*{stage(h, 0, 0.3)}"), Height=I(0.002)),
+            solid("Base", (1, 1, 1), (-385, -165), alpha=0.6, mask="MascBase")]
+    layers = [("Base", f"{h}.Xs")]
+    for i, x in enumerate(xs, 1):
+        a = 0.25 + 0.14 * (i - 1)
+        body += [ellipse(f"MascHito{i}", (-330 + 44 * i, -198), Center=I((x, 0.5)), Width=I(0.014), Height=I(0.014)),
+                 solid(f"Hito{i}", (1, 0.8, 0.3), (-330 + 44 * i, -165), mask=f"MascHito{i}"),
+                 text_tool(f"Anio{i}", years[i - 1], 0.035, (x, 0.56), (-330 + 44 * i, -132)),
+                 text_tool(f"Nota{i}", f"Evento {i}", 0.022, (x, 0.43), (-330 + 44 * i, -99), rgb=(0.8, 0.8, 0.8), style="Regular")]
+        if i > 1:
+            for ch in ("Red", "Green", "Blue"):
+                body[-3].inputs[f"TopLeft{ch}"] = I(1, f"Hito1.TopLeft{ch}")
+        layers += [(f"Hito{i}", stage(h, a, a + 0.12)), (f"Anio{i}", stage(h, a + 0.04, a + 0.18)), (f"Nota{i}", stage(h, a + 0.08, a + 0.22))]
+    pubs = []
+    for i in range(1, n + 1):
+        pubs += [pub(f"Anio{i}", "StyledText", f"Año {i}"), pub(f"Nota{i}", "StyledText", f"Texto {i}")]
+    pubs += [pub_color("Hito1", "Color de los hitos", (1, 0.8, 0.3), 30)]
+    return title(name, h, ucs, inputs, body, layers, pubs, x_end=660)
+
+
+# ======================================================================= GENERADORES (lote 7)
+@register("Generators", "PRO_GEN_Degradado_Animado")
+def degradado_animado(name, anim):
+    from fusion_builder import gradient
+    h = "Degradado"
+    th = f"({h}.Progreso*{h}.Vueltas*6.2831853 + {h}.AnguloIni*{PI}/180)"
+    tools = [Tool("Rampa", "Background", {**frame_format(), "Type": I(FuID("Gradient")),
+                                          "Start": I((0, 0.5), f"Point(0.5 - 0.5*sin({th} + 1.5707963), 0.5 - 0.5*sin({th}))"),
+                                          "End": I((1, 0.5), f"Point(0.5 + 0.5*sin({th} + 1.5707963), 0.5 + 0.5*sin({th}))"),
+                                          "Gradient": I(gradient([(0, (0, 0, 0, 1)), (1, (1, 1, 1, 1))]))}, pos=(-330, 0)),
+             solid("Blanco", (1, 1, 1), (-330, -66)),
+             merge("RampaInv", "Blanco", "Rampa", (-275, -66), "Difference"),
+             solid("ColorA", (0.15, 0.1, 0.35), (-275, -132)),
+             solid("ColorB", (0.95, 0.35, 0.3), (-275, 66)),
+             merge("ParteA", "RampaInv", "ColorA", (-220, -66), "Multiply"),
+             merge("ParteB", "Rampa", "ColorB", (-220, 66), "Multiply"),
+             merge("Suma", "ParteA", "ParteB", (-165, 0), extra={"SubtractiveAdditive": I(0)})]
+    t, last = blk_grain("Gr", "Suma", None, -110)
+    tools += t
+    tools[-1].inputs["Blend"] = I(0.04)
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Vueltas", "Giro (vueltas por clip)", 0.25, -3, 3),
+           uc("AnguloIni", "Ángulo inicial", 30, -180, 180)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Progreso": I(link=anim, out="Value"),
+                                                "Vueltas": I(0.25), "AnguloIni": I(30)}, ucs, (0, 0)))
+    pubs = [pub_color("ColorA", "Color A", (0.15, 0.1, 0.35), 1), pub_color("ColorB", "Color B", (0.95, 0.35, 0.3), 4),
+            pub(h, "Vueltas", "Giro (vueltas por clip)", 0.25), pub(h, "AnguloIni", "Ángulo inicial", 30),
+            pub("GrGrano", "Blend", "Textura", 0.04), pub(h, "Saturation", "Saturación", 1)]
+    return macro(name, [], pubs, h, tools, anim)
+
+
+@register("Generators", "PRO_GEN_Bokeh")
+def bokeh(name, anim):
+    import random
+    rnd = random.Random(7)
+    h = "Bokeh"
+    v = f"{h}.Velocidad"
+    tools = [solid("Fondo", (0.03, 0.03, 0.05), (-440, 0)), solid("Blanco", (1, 1, 1), (-440, -66))]
+    last = "Fondo"
+    for i in range(1, 15):
+        x0, y0 = rnd.uniform(0.05, 0.95), rnd.uniform(0.05, 0.95)
+        size = rnd.uniform(0.05, 0.16)
+        s1, s2, ph = rnd.uniform(0.01, 0.03), rnd.uniform(0.01, 0.03), rnd.uniform(0, 6.28)
+        col = "ColorA" if i % 2 else "ColorB"
+        tools += [ellipse(f"MascC{i}", (-385 + 33 * i, -132), Width=I(size), Height=I(size), SoftEdge=I(size * 0.15),
+                          Center=I((x0, y0), f"Point({x0:.3f} + 0.04*sin(time*{s1:.4f}*{v} + {ph:.2f}), {y0:.3f} + 0.03*sin(time*{s2:.4f}*{v} + {ph * 1.3:.2f}) + time*0.0004*{v})")),
+                  Tool(f"C{i}", "Background", {"EffectMask": I(link=f"MascC{i}", out="Mask"), **frame_format(),
+                                               "TopLeftRed": I(1, f"{col}.TopLeftRed"), "TopLeftGreen": I(1, f"{col}.TopLeftGreen"),
+                                               "TopLeftBlue": I(1, f"{col}.TopLeftBlue"), "TopLeftAlpha": I(1)}, pos=(-385 + 33 * i, -99)),
+                  merge(f"Suma{i}", last, f"C{i}", (-385 + 33 * i, 0), "Screen", blend=0.3,
+                        blend_expr=f"{h}.Intensidad*{rnd.uniform(0.25, 0.7):.2f}")]
+        last = f"Suma{i}"
+    tools = tools[:2] + [solid("ColorA", (1, 0.7, 0.35), (-440, -132)), solid("ColorB", (0.45, 0.6, 1), (-440, -165))] + tools[2:]
+    tools.append(Tool("Suavidad", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(4), "Input": I(link=last)}, pos=(110, 0)))
+    ucs = [uc("Velocidad", "Velocidad", 1, 0, 5), uc("Intensidad", "Intensidad", 1, 0, 2)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Suavidad"), "Velocidad": I(1), "Intensidad": I(1)}, ucs, (165, 0)))
+    pubs = [pub_color("Fondo", "Color de fondo", (0.03, 0.03, 0.05), 1), pub_color("ColorA", "Color de luces A", (1, 0.7, 0.35), 4),
+            pub_color("ColorB", "Color de luces B", (0.45, 0.6, 1), 7), pub(h, "Intensidad", "Intensidad", 1),
+            pub(h, "Velocidad", "Velocidad", 1), pub("Suavidad", "XBlurSize", "Desenfoque", 4)]
+    return macro(name, [], pubs, h, tools)
+
+
+# ======================================================================= EFECTOS (lote 7)
+@register("Effects", "PRO_FX_Duotono")
+def duotono(name, anim):
+    tools = [Tool("Entrada", "PipeRouter", pos=(-385, 0)),
+             Tool("Luma", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(0), "Contrast": I(0.15)}, pos=(-330, -66)),
+             solid("Blanco", (1, 1, 1), (-330, -132)),
+             merge("LumaInv", "Blanco", "Luma", (-275, -132), "Difference"),
+             solid("Sombras", (0.1, 0.05, 0.35), (-275, -198)),
+             solid("Luces", (1, 0.55, 0.45), (-275, 0)),
+             merge("ParteS", "LumaInv", "Sombras", (-220, -132), "Multiply"),
+             merge("ParteL", "Luma", "Luces", (-220, -66), "Multiply"),
+             merge("Duo", "ParteS", "ParteL", (-165, -99), extra={"SubtractiveAdditive": I(0)}),
+             merge("Duotono", "Entrada", "Duo", (-110, 0), blend=1)]
+    pubs = [pub_color("Sombras", "Color de sombras", (0.1, 0.05, 0.35), 1), pub_color("Luces", "Color de luces", (1, 0.55, 0.45), 4),
+            pub("Luma", "Contrast", "Contraste", 0.15), pub("Duotono", "Blend", "Mezcla con el original", 1)]
+    return macro(name, [("Entrada", "Input")], pubs, "Duotono", tools)
+
+
+@register("Effects", "PRO_FX_Glow_Neon")
+def glow_neon(name, anim):
+    tools = [Tool("Entrada", "PipeRouter", pos=(-385, 0)),
+             Tool("Fuentes", "BrightnessContrast", {"Input": I(link="Entrada"), "Low": I(0.55), "High": I(1), "Saturation": I(1.4)}, pos=(-330, -66)),
+             Tool("Nucleo", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(8), "Input": I(link="Fuentes")}, pos=(-275, -99)),
+             Tool("Halo", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(45), "Input": I(link="Fuentes")}, pos=(-275, -33)),
+             merge("ConNucleo", "Entrada", "Nucleo", (-220, 0), "Screen", blend=0.7),
+             merge("Neon", "ConNucleo", "Halo", (-165, 0), "Screen", blend=0.6)]
+    pubs = [pub("Fuentes", "Low", "Umbral (más bajo = más brillo)", 0.55), pub("ConNucleo", "Blend", "Brillo cercano", 0.7),
+            pub("Neon", "Blend", "Halo amplio", 0.6), pub("Halo", "XBlurSize", "Radio del halo", 45),
+            pub("Nucleo", "XBlurSize", "Radio cercano", 8), pub("Fuentes", "Saturation", "Saturación del brillo", 1.4)]
+    return macro(name, [("Entrada", "Input")], pubs, "Neon", tools)
+
+
+@register("Effects", "PRO_FX_Polvo_Flotante")
+def polvo_flotante(name, anim):
+    h = "Polvo"
+    v = f"{h}.Velocidad"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-385, 0))]
+    for i, (scale, low, blur, sp) in enumerate(((60, 0.86, 1.5, 1.0), (25, 0.9, 5, 0.6)), 1):
+        tools += [Tool(f"Ruido{i}", "FastNoise", {**frame_format(), "Detail": I(8), "Contrast": I(2.5), "XScale": I(scale),
+                                                  "SeetheRate": I(0.02),
+                                                  "Center": I((0.5, 0.5), f"Point(0.5 + time*0.0004*{sp}*{v}, 0.5 - time*0.0007*{sp}*{v})")},
+                       pos=(-330, -132 + 66 * (i - 1))),
+                  Tool(f"Motas{i}", "BrightnessContrast", {"Input": I(link=f"Ruido{i}"), "Saturation": I(0),
+                                                           "Low": I(low, f"{low} + (1 - {h}.Cantidad)*0.08"), "High": I(1)},
+                       pos=(-275, -132 + 66 * (i - 1))),
+                  Tool(f"Suave{i}", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(blur), "Input": I(link=f"Motas{i}")},
+                       pos=(-220, -132 + 66 * (i - 1)))]
+    tools += [merge("Capa1", "Entrada", "Suave1", (-165, 0), "Screen", blend=0.6, blend_expr=f"{h}.Brillo"),
+              merge("Capa2", "Capa1", "Suave2", (-110, 0), "Screen", blend=0.4, blend_expr=f"{h}.Brillo*0.7")]
+    ucs = [uc("Cantidad", "Cantidad", 0.5, 0, 1), uc("Brillo", "Brillo", 0.6, 0, 1.5), uc("Velocidad", "Velocidad", 1, 0, 5)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Capa2"), "Cantidad": I(0.5), "Brillo": I(0.6), "Velocidad": I(1)}, ucs, (-55, 0)))
+    pubs = [pub(h, "Cantidad", "Cantidad", 0.5), pub(h, "Brillo", "Brillo", 0.6), pub(h, "Velocidad", "Velocidad", 1),
+            pub("Suave1", "XBlurSize", "Desenfoque de motas", 1.5)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Social_Tarjeta")
+def tarjeta(name, anim):
+    """El clip reducido como tarjeta con esquinas redondeadas y sombra sobre un fondo de color."""
+    h = "Tarjeta"
+    tools = [Tool("Reducir", "Transform", {"Size": I(0.85, f"{h}.Tamano")}, pos=(-330, 0)),
+             solid("Fondo", (0.95, 0.93, 0.9), (-330, -132)),
+             rect("MascTarjeta", (-275, -165), Width=I(0.85, f"{h}.Tamano"), Height=I(1.51, f"{h}.Tamano/{h}.Aspecto"),
+                  CornerRadius=I(0.08, f"{h}.Redondeo")),
+             rect("MascSombra", (-220, -165), Width=I(0.85, f"{h}.Tamano"), Height=I(1.51, f"{h}.Tamano/{h}.Aspecto"),
+                  CornerRadius=I(0.08, f"{h}.Redondeo"), SoftEdge=I(0.03), Center=I((0.5, 0.49))),
+             solid("Sombra", (0, 0, 0), (-220, -132), mask="MascSombra"),
+             merge("ConSombra", "Fondo", "Sombra", (-165, -66), blend=0.35),
+             merge(h, "ConSombra", "Reducir", (-110, 0), blend=1, extra={"EffectMask": I(link="MascTarjeta", out="Mask")},
+                   ucs=[uc("Tamano", "Tamaño", 0.85, 0.3, 1), uc("Redondeo", "Redondeo de esquinas", 0.08, 0, 0.5),
+                        uc("Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625, 0.4, 3)])]
+    tools[-1].inputs.update({"Tamano": I(0.85), "Redondeo": I(0.08), "Aspecto": I(0.5625)})
+    pubs = [pub(h, "Tamano", "Tamaño", 0.85), pub(h, "Redondeo", "Redondeo de esquinas", 0.08),
+            pub_color("Fondo", "Color del fondo", (0.95, 0.93, 0.9), 3), pub("ConSombra", "Blend", "Sombra", 0.35),
+            pub(h, "Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625)]
+    return macro(name, [("Reducir", "Input")], pubs, h, tools)
+
+
+if __name__ == "__main__":
+    for (cat, name), fn in BUILT.items():
+        anim = "PRO" + name.split("_", 2)[-1].replace("_", "") + "Anim"
+        out = ROOT / cat / f"{name}.setting"
+        out.write_text(fn(name, anim), encoding="utf-8", newline="\n")
+        print(f"{cat}/{out.name}")

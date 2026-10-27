@@ -1,0 +1,59 @@
+// PRO Teal & Orange - Resolve Pro Pack
+// Requiere DaVinci Resolve Studio (plugin ResolveFX DCTL).
+// Entrada esperada: Rec.709 Gamma 2.4. Con material log, convierte antes (CST) y aplica esto despues.
+// Con los valores por defecto y Intensidad = 1 da el mismo resultado que LUTs/PRO_Look_TealOrange.cube.
+
+DEFINE_UI_PARAMS(intensidad, Intensidad, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.5, 0.01)
+DEFINE_UI_PARAMS(contraste, Contraste, DCTLUI_SLIDER_FLOAT, 0.30, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(tonificado, Tonificado sombras-altas, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(eje, Empuje eje piel-cian, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
+
+__DEVICE__ float s_curve(float x, float k)
+{
+    x = _saturatef(x);
+    return x + k * (x * x * (3.0f - 2.0f * x) - x);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    const float KR = 0.2126f, KG = 0.7152f, KB = 0.0722f;
+    const float CB_DIV = 1.8556f, CR_DIV = 1.5748f;
+
+    // 1. contraste en S
+    float r = s_curve(p_R, contraste);
+    float g = s_curve(p_G, contraste);
+    float b = s_curve(p_B, contraste);
+
+    // 2. split toning segun luminancia
+    float y = KR * r + KG * g + KB * b;
+    float sh = (1.0f - y) * (1.0f - y);
+    float hi = y * y;
+    r += tonificado * (-0.035f * sh + 0.045f * hi);
+    g += tonificado * ( 0.010f * sh + 0.012f * hi);
+    b += tonificado * ( 0.040f * sh - 0.045f * hi);
+
+    // 3. croma hacia el eje naranja (piel) - cian
+    y = KR * r + KG * g + KB * b;
+    float cb = (b - y) / CB_DIV;
+    float cr = (r - y) / CR_DIV;
+    const float ux = -0.6487f, uy = 0.7610f;
+    float along = cb * ux + cr * uy;
+    float px = cb - along * ux;
+    float py = cr - along * uy;
+    float k_along = 1.0f + 0.12f * eje;
+    float k_perp = 1.0f - 0.28f * eje;
+    cb = along * k_along * ux + px * k_perp;
+    cr = along * k_along * uy + py * k_perp;
+    r = y + CR_DIV * cr;
+    b = y + CB_DIV * cb;
+    g = (y - KR * r - KB * b) / KG;
+
+    r = _saturatef(r);
+    g = _saturatef(g);
+    b = _saturatef(b);
+
+    // 4. mezcla con el original
+    return make_float3(p_R + (r - p_R) * intensidad,
+                       p_G + (g - p_G) * intensidad,
+                       p_B + (b - p_B) * intensidad);
+}

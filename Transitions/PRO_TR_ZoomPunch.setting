@@ -1,0 +1,104 @@
+{
+	Tools = ordered() {
+		PRO_TR_ZoomPunch = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "ZoomSaliente", Source = "Input", },
+				MainInput2 = InstanceInput { SourceOp = "ZoomEntrante", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Mezcla", Source = "Zoom", Name = "Zoom", Default = 1, },
+				Input2 = InstanceInput { SourceOp = "Mezcla", Source = "Desenfoque", Name = "Desenfoque", Default = 20, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Mezcla", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				ZoomSaliente = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Zoom*min(1, 2*Mezcla.Progreso)*min(1, 2*Mezcla.Progreso)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -33 } },
+				},
+				ZoomEntrante = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Zoom*(1 - max(0, 2*Mezcla.Progreso - 1))*(1 - max(0, 2*Mezcla.Progreso - 1))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 33 } },
+				},
+				BlurSaliente = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "Mezcla.Desenfoque*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+						Input = Input { SourceOp = "ZoomSaliente", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -33 } },
+				},
+				BlurEntrante = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "Mezcla.Desenfoque*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+						Input = Input { SourceOp = "ZoomEntrante", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 33 } },
+				},
+				Mezcla = Dissolve {
+					CtrlWShown = false,
+					Inputs = {
+						Mix = Input { Value = 0, Expression = "(max(0, min(1, (Mezcla.Progreso - 0.4)/0.2)))*(max(0, min(1, (Mezcla.Progreso - 0.4)/0.2)))*(3-2*(max(0, min(1, (Mezcla.Progreso - 0.4)/0.2))))", },
+						Background = Input { SourceOp = "BlurSaliente", Source = "Output", },
+						Foreground = Input { SourceOp = "BlurEntrante", Source = "Output", },
+						Progreso = Input { SourceOp = "PROZoomPunchAnim", Source = "Value", },
+						Zoom = Input { Value = 1, },
+						Desenfoque = Input { Value = 20, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Zoom = {
+							LINKS_Name = "Zoom",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+						Desenfoque = {
+							LINKS_Name = "Desenfoque",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 20,
+							INP_MinScale = 0,
+							INP_MaxScale = 100,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 100,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PROZoomPunchAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_ZoomPunch"
+}

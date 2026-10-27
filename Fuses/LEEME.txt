@@ -1,0 +1,3 @@
+Carpeta reservada para Fuses (.fuse, Lua).
+El piloto no incluye ninguno: todas las piezas se resolvieron con macros de Fusion.
+install.ps1 copia aqui solo archivos PRO_*.fuse a %APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Fuses

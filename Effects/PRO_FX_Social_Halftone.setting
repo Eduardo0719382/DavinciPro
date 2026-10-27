@@ -1,0 +1,163 @@
+{
+	Tools = ordered() {
+		PRO_FX_Social_Halftone = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Trama", Source = "Tamano", Name = "Tamaño de la trama", Default = 0.012, },
+				Input2 = InstanceInput { SourceOp = "Trama", Source = "Blend", Name = "Intensidad", Default = 1, },
+				Input3 = InstanceInput { SourceOp = "Color", Source = "Saturation", Name = "Saturación (0 = blanco y negro)", Default = 1, },
+				Input4 = InstanceInput { SourceOp = "Binario", Source = "Low", Name = "Umbral", Default = 0.97, },
+				Input5 = InstanceInput { SourceOp = "Trama", Source = "Aspecto", Name = "Aspecto del timeline (9:16 = 0.5625)", Default = 0.5625, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Trama", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 0 } },
+				},
+				Luma = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Saturation = Input { Value = 0, },
+						Contrast = Input { Value = 0.1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, -66 } },
+				},
+				OndaX = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Type = Input { Value = FuID { "Gradient" }, },
+						Repeat = Input { Value = FuID { "Ping-Pong" }, },
+						Start = Input { Value = { 0.5, 0.5 }, },
+						End = Input { Value = { 0.5, 0.55 }, Expression = "Point(0.5 + Trama.Tamano/2/Trama.Aspecto, 0.5)", },
+						Gradient = Input { Value = Gradient { Colors = { [0] = { 0, 0, 0, 1 }, [1] = { 1, 1, 1, 1 } } }, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, -165 } },
+				},
+				OndaY = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Type = Input { Value = FuID { "Gradient" }, },
+						Repeat = Input { Value = FuID { "Ping-Pong" }, },
+						Start = Input { Value = { 0.5, 0.5 }, },
+						End = Input { Value = { 0.5, 0.55 }, Expression = "Point(0.5, 0.5 + Trama.Tamano/2)", },
+						Gradient = Input { Value = Gradient { Colors = { [0] = { 0, 0, 0, 1 }, [1] = { 1, 1, 1, 1 } } }, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -165 } },
+				},
+				Puntos = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "OndaX", Source = "Output", },
+						Foreground = Input { SourceOp = "OndaY", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -132 } },
+				},
+				Blanco = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -198 } },
+				},
+				PuntosInv = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Blanco", Source = "Output", },
+						Foreground = Input { SourceOp = "Puntos", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Difference" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -132 } },
+				},
+				Suma = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Luma", Source = "Output", },
+						Foreground = Input { SourceOp = "PuntosInv", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+						SubtractiveAdditive = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				Binario = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Suma", Source = "Output", },
+						Low = Input { Value = 0.97, },
+						High = Input { Value = 1.03, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -66 } },
+				},
+				Color = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Saturation = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+				Trama = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Color", Source = "Output", },
+						Foreground = Input { SourceOp = "Binario", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						Blend = Input { Value = 1, },
+						PerformDepthMerge = Input { Value = 0, },
+						Tamano = Input { Value = 0.012, },
+						Aspecto = Input { Value = 0.5625, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+					UserControls = ordered() {
+						Tamano = {
+							LINKS_Name = "Tamaño de la trama",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.012,
+							INP_MinScale = 0.003,
+							INP_MaxScale = 0.05,
+							INP_MinAllowed = 0.003,
+							INP_MaxAllowed = 0.05,
+							ICS_ControlPage = "Controls",
+						},
+						Aspecto = {
+							LINKS_Name = "Aspecto del timeline (9:16 = 0.5625)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.5625,
+							INP_MinScale = 0.4,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0.4,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Social_Halftone"
+}

@@ -1,0 +1,77 @@
+{
+	Tools = ordered() {
+		PRO_FX_Glow_Neon = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Fuentes", Source = "Low", Name = "Umbral (más bajo = más brillo)", Default = 0.55, },
+				Input2 = InstanceInput { SourceOp = "ConNucleo", Source = "Blend", Name = "Brillo cercano", Default = 0.7, },
+				Input3 = InstanceInput { SourceOp = "Neon", Source = "Blend", Name = "Halo amplio", Default = 0.6, },
+				Input4 = InstanceInput { SourceOp = "Halo", Source = "XBlurSize", Name = "Radio del halo", Default = 45, },
+				Input5 = InstanceInput { SourceOp = "Nucleo", Source = "XBlurSize", Name = "Radio cercano", Default = 8, },
+				Input6 = InstanceInput { SourceOp = "Fuentes", Source = "Saturation", Name = "Saturación del brillo", Default = 1.4, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Neon", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -385, 0 } },
+				},
+				Fuentes = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Low = Input { Value = 0.55, },
+						High = Input { Value = 1, },
+						Saturation = Input { Value = 1.4, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -66 } },
+				},
+				Nucleo = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 8, },
+						Input = Input { SourceOp = "Fuentes", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -99 } },
+				},
+				Halo = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 45, },
+						Input = Input { SourceOp = "Fuentes", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -33 } },
+				},
+				ConNucleo = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "Nucleo", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.7, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 0 } },
+				},
+				Neon = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ConNucleo", Source = "Output", },
+						Foreground = Input { SourceOp = "Halo", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.6, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Glow_Neon"
+}

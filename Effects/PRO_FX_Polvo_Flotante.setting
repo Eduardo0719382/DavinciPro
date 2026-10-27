@@ -1,0 +1,160 @@
+{
+	Tools = ordered() {
+		PRO_FX_Polvo_Flotante = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Polvo", Source = "Cantidad", Name = "Cantidad", Default = 0.5, },
+				Input2 = InstanceInput { SourceOp = "Polvo", Source = "Brillo", Name = "Brillo", Default = 0.6, },
+				Input3 = InstanceInput { SourceOp = "Polvo", Source = "Velocidad", Name = "Velocidad", Default = 1, },
+				Input4 = InstanceInput { SourceOp = "Suave1", Source = "XBlurSize", Name = "Desenfoque de motas", Default = 1.5, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Polvo", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -385, 0 } },
+				},
+				Ruido1 = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 8, },
+						Contrast = Input { Value = 2.5, },
+						XScale = Input { Value = 60, },
+						SeetheRate = Input { Value = 0.02, },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + time*0.0004*1.0*Polvo.Velocidad, 0.5 - time*0.0007*1.0*Polvo.Velocidad)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -132 } },
+				},
+				Motas1 = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Ruido1", Source = "Output", },
+						Saturation = Input { Value = 0, },
+						Low = Input { Value = 0.86, Expression = "0.86 + (1 - Polvo.Cantidad)*0.08", },
+						High = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -132 } },
+				},
+				Suave1 = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 1.5, },
+						Input = Input { SourceOp = "Motas1", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -132 } },
+				},
+				Ruido2 = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 8, },
+						Contrast = Input { Value = 2.5, },
+						XScale = Input { Value = 25, },
+						SeetheRate = Input { Value = 0.02, },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + time*0.0004*0.6*Polvo.Velocidad, 0.5 - time*0.0007*0.6*Polvo.Velocidad)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -66 } },
+				},
+				Motas2 = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Ruido2", Source = "Output", },
+						Saturation = Input { Value = 0, },
+						Low = Input { Value = 0.9, Expression = "0.9 + (1 - Polvo.Cantidad)*0.08", },
+						High = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -66 } },
+				},
+				Suave2 = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 5, },
+						Input = Input { SourceOp = "Motas2", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				Capa1 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "Suave1", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.6, Expression = "Polvo.Brillo", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+				Capa2 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Capa1", Source = "Output", },
+						Foreground = Input { SourceOp = "Suave2", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.4, Expression = "Polvo.Brillo*0.7", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+				},
+				Polvo = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Capa2", Source = "Output", },
+						Cantidad = Input { Value = 0.5, },
+						Brillo = Input { Value = 0.6, },
+						Velocidad = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, 0 } },
+					UserControls = ordered() {
+						Cantidad = {
+							LINKS_Name = "Cantidad",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.5,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Brillo = {
+							LINKS_Name = "Brillo",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.6,
+							INP_MinScale = 0,
+							INP_MaxScale = 1.5,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1.5,
+							ICS_ControlPage = "Controls",
+						},
+						Velocidad = {
+							LINKS_Name = "Velocidad",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 5,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 5,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Polvo_Flotante"
+}

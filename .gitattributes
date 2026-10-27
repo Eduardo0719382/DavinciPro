@@ -1,0 +1,3 @@
+# Los archivos se guardan tal cual (sin convertir saltos de linea), para que Resolve
+# reciba exactamente lo mismo en todas las PC y el instalador compare hashes correctamente.
+* -text

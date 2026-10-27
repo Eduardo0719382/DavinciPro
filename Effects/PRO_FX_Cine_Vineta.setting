@@ -1,0 +1,66 @@
+{
+	Tools = ordered() {
+		PRO_FX_Cine_Vineta = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Vineta", Source = "Background", },
+				Input1 = InstanceInput { SourceOp = "Vineta", Source = "Blend", Name = "Intensidad", Default = 0.5, },
+				Input2 = InstanceInput { SourceOp = "Ovalo", Source = "SoftEdge", Name = "Suavidad", Default = 0.35, },
+				Input3 = InstanceInput { SourceOp = "Ovalo", Source = "Width", Name = "Ancho", Default = 1.25, },
+				Input4 = InstanceInput { SourceOp = "Ovalo", Source = "Height", Name = "Alto", Default = 0.8, },
+				Input5 = InstanceInput { SourceOp = "Ovalo", Source = "Center", Name = "Centro", },
+				Input6 = InstanceInput { SourceOp = "Sombra", Source = "TopLeftRed", Name = "Color", ControlGroup = 6, Default = 0, },
+				Input7 = InstanceInput { SourceOp = "Sombra", Source = "TopLeftGreen", ControlGroup = 6, Default = 0, },
+				Input8 = InstanceInput { SourceOp = "Sombra", Source = "TopLeftBlue", ControlGroup = 6, Default = 0, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Vineta", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Ovalo = EllipseMask {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						OutputSize = Input { Value = FuID { "Custom" }, },
+						MaskWidth = Input { Value = 1920, },
+						MaskHeight = Input { Value = 1080, },
+						PixelAspect = Input { Value = { 1, 1 }, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Invert = Input { Value = 1, },
+						SoftEdge = Input { Value = 0.35, },
+						Width = Input { Value = 1.25, },
+						Height = Input { Value = 0.8, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -66 } },
+				},
+				Sombra = Background {
+					CtrlWShown = false,
+					Inputs = {
+						EffectMask = Input { SourceOp = "Ovalo", Source = "Mask", },
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0, },
+						TopLeftGreen = Input { Value = 0, },
+						TopLeftBlue = Input { Value = 0, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -33 } },
+				},
+				Vineta = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Foreground = Input { SourceOp = "Sombra", Source = "Output", },
+						Blend = Input { Value = 0.5, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Cine_Vineta"
+}

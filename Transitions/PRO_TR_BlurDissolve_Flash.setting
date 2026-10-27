@@ -1,0 +1,174 @@
+{
+	Tools = ordered() {
+		PRO_TR_BlurDissolve_Flash = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput {
+					SourceOp = "BlurSaliente",
+					Source = "Input",
+				},
+				MainInput2 = InstanceInput {
+					SourceOp = "BlurEntrante",
+					Source = "Input",
+				},
+				Input1 = InstanceInput {
+					SourceOp = "Mezcla",
+					Source = "Desenfoque",
+					Name = "Desenfoque",
+					Default = 25,
+				},
+				Input2 = InstanceInput {
+					SourceOp = "Mezcla",
+					Source = "Flash",
+					Name = "Flash (intensidad)",
+					Default = 0,
+				},
+				Input3 = InstanceInput {
+					SourceOp = "ColorFlash",
+					Source = "TopLeftRed",
+					Name = "Color del flash",
+					ControlGroup = 3,
+					Default = 1,
+				},
+				Input4 = InstanceInput {
+					SourceOp = "ColorFlash",
+					Source = "TopLeftGreen",
+					ControlGroup = 3,
+					Default = 1,
+				},
+				Input5 = InstanceInput {
+					SourceOp = "ColorFlash",
+					Source = "TopLeftBlue",
+					ControlGroup = 3,
+					Default = 1,
+				}
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput {
+					SourceOp = "Destello",
+					Source = "Output",
+				}
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				BlurSaliente = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input {
+							Value = 0,
+							Expression = "Mezcla.Desenfoque*sin(Mezcla.Progreso*3.14159265)",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -33 } },
+				},
+				BlurEntrante = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input {
+							Value = 0,
+							Expression = "Mezcla.Desenfoque*sin(Mezcla.Progreso*3.14159265)",
+						},
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 33 } },
+				},
+				Mezcla = Dissolve {
+					CtrlWShown = false,
+					Inputs = {
+						Mix = Input {
+							Value = 0,
+							Expression = "Mezcla.Progreso*Mezcla.Progreso*(3-2*Mezcla.Progreso)",
+						},
+						Background = Input {
+							SourceOp = "BlurSaliente",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "BlurEntrante",
+							Source = "Output",
+						},
+						Progreso = Input {
+							SourceOp = "PROBlurDissolveAnim",
+							Source = "Value",
+						},
+						Desenfoque = Input { Value = 25, },
+						Flash = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Desenfoque = {
+							LINKS_Name = "Desenfoque",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 25,
+							INP_MinScale = 0,
+							INP_MaxScale = 100,
+							INP_MinAllowed = 0,
+							ICS_ControlPage = "Controls",
+						},
+						Flash = {
+							LINKS_Name = "Flash (intensidad)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						}
+					}
+				},
+				ColorFlash = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, -66 } },
+				},
+				Destello = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input {
+							SourceOp = "Mezcla",
+							Source = "Output",
+						},
+						Foreground = Input {
+							SourceOp = "ColorFlash",
+							Source = "Output",
+						},
+						Blend = Input {
+							Value = 0,
+							Expression = "Mezcla.Flash*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)",
+						},
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 0 } },
+				}
+			},
+		},
+		PROBlurDissolveAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		}
+	},
+	ActiveTool = "PRO_TR_BlurDissolve_Flash"
+}

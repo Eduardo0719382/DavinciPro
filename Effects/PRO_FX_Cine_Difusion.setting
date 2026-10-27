@@ -1,0 +1,82 @@
+{
+	Tools = ordered() {
+		PRO_FX_Cine_Difusion = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Brillo", Source = "Blend", Name = "Brillo en altas luces", Default = 0.45, },
+				Input2 = InstanceInput { SourceOp = "Altas", Source = "Low", Name = "Umbral de altas luces", Default = 0.6, },
+				Input3 = InstanceInput { SourceOp = "Halo", Source = "XBlurSize", Name = "Radio del brillo", Default = 60, },
+				Input4 = InstanceInput { SourceOp = "Suavizado", Source = "Blend", Name = "Suavizado del detalle", Default = 0.25, },
+				Input5 = InstanceInput { SourceOp = "Negros", Source = "Lift", Name = "Negros levantados", Default = 0.02, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Negros", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -330, 0 } },
+				},
+				Altas = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Low = Input { Value = 0.6, },
+						High = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				Halo = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 60, },
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -66 } },
+				},
+				Suave = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 8, },
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 66 } },
+				},
+				Suavizado = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "Suave", Source = "Output", },
+						Blend = Input { Value = 0.25, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+				},
+				Brillo = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Suavizado", Source = "Output", },
+						Foreground = Input { SourceOp = "Halo", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.45, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+				},
+				Negros = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Brillo", Source = "Output", },
+						Lift = Input { Value = 0.02, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 0 } },
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Cine_Difusion"
+}

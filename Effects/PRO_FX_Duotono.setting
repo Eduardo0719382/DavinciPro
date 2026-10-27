@@ -1,0 +1,130 @@
+{
+	Tools = ordered() {
+		PRO_FX_Duotono = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Sombras", Source = "TopLeftRed", Name = "Color de sombras", ControlGroup = 1, Default = 0.1, },
+				Input2 = InstanceInput { SourceOp = "Sombras", Source = "TopLeftGreen", ControlGroup = 1, Default = 0.05, },
+				Input3 = InstanceInput { SourceOp = "Sombras", Source = "TopLeftBlue", ControlGroup = 1, Default = 0.35, },
+				Input4 = InstanceInput { SourceOp = "Luces", Source = "TopLeftRed", Name = "Color de luces", ControlGroup = 4, Default = 1, },
+				Input5 = InstanceInput { SourceOp = "Luces", Source = "TopLeftGreen", ControlGroup = 4, Default = 0.55, },
+				Input6 = InstanceInput { SourceOp = "Luces", Source = "TopLeftBlue", ControlGroup = 4, Default = 0.45, },
+				Input7 = InstanceInput { SourceOp = "Luma", Source = "Contrast", Name = "Contraste", Default = 0.15, },
+				Input8 = InstanceInput { SourceOp = "Duotono", Source = "Blend", Name = "Mezcla con el original", Default = 1, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Duotono", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -385, 0 } },
+				},
+				Luma = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Saturation = Input { Value = 0, },
+						Contrast = Input { Value = 0.15, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -66 } },
+				},
+				Blanco = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -132 } },
+				},
+				LumaInv = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Blanco", Source = "Output", },
+						Foreground = Input { SourceOp = "Luma", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Difference" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -132 } },
+				},
+				Sombras = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0.1, },
+						TopLeftGreen = Input { Value = 0.05, },
+						TopLeftBlue = Input { Value = 0.35, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -198 } },
+				},
+				Luces = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 0.55, },
+						TopLeftBlue = Input { Value = 0.45, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				ParteS = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "LumaInv", Source = "Output", },
+						Foreground = Input { SourceOp = "Sombras", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -132 } },
+				},
+				ParteL = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Luma", Source = "Output", },
+						Foreground = Input { SourceOp = "Luces", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				Duo = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ParteS", Source = "Output", },
+						Foreground = Input { SourceOp = "ParteL", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+						SubtractiveAdditive = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -99 } },
+				},
+				Duotono = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "Duo", Source = "Output", },
+						Blend = Input { Value = 1, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Duotono"
+}
