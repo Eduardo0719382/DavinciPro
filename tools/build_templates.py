@@ -4,6 +4,7 @@ Genera las plantillas de Fusion del lote "Dinamico y Cine".
 Uso:  python tools/build_templates.py      (escribe en Effects/ y Transitions/)
 Las 4 piezas del piloto estan escritas a mano y este script no las toca.
 """
+import math
 from pathlib import Path
 
 from fusion_builder import (FuID, I, PI, Tool, clamp01, envelope_ucs, frame_format, macro,
@@ -2934,26 +2935,31 @@ def social_comentario_foto(name, anim_):
 
 
 def comentario(name, foto):
+    """Burbuja de comentario. Todo se mide en unidades del ancho del cuadro (como el tamano del texto), y las alturas de
+    texto se pasan a coordenadas del cuadro con el aspecto que fija 'Formato vertical', para que avatar y textos queden
+    dentro de la caja en 16:9 y en 9:16."""
     h = "Comentario"
+    asp = f"iif({h}.Vertical > 0.5, 0.5625, 1.7778)"
     extra_ucs = [uc("Rebote", "Rebote", 1.2, 0, 3), uc("Ancho", "Ancho de la burbuja", 0.52, 0.2, 1)]
     extra_inputs = {"Rebote": I(1.2), "Ancho": I(0.52)}
     if foto:
         extra_ucs += [uc("ZoomFoto", "Zoom de la foto", 1, 0.3, 4), uc("FotoX", "Encuadre X de la foto", 0, -0.5, 0.5),
-                      uc("FotoY", "Encuadre Y de la foto", 0, -0.5, 0.5),
-                      uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625, 0.4, 3)]
-        extra_inputs.update({"ZoomFoto": I(1), "FotoX": I(0), "FotoY": I(0), "Aspecto": I(0.5625)})
+                      uc("FotoY", "Encuadre Y de la foto", 0, -0.5, 0.5)]
+        extra_inputs.update({"ZoomFoto": I(1), "FotoX": I(0), "FotoY": I(0)})
     ucs, inputs = kit(h, 0.12, 0.08, extra_ucs, extra_inputs)
+    pad, d = 0.016, 0.064
     x0 = f"(0.5 - {h}.Ancho/2)"
-    d = 0.06 if foto else 0.045
-    xa = f"{x0} + {0.045 if foto else 0.04:g}"
+    xa = f"{x0} + {pad + d / 2:g}"
+    xt = f"{x0} + {2 * pad + d:g}"
     body = [solid("Base", (0, 0, 0), (-440, -198), alpha=0),
-            rect("MascCaja", (-385, -231), Width=I(0.52, f"{h}.Ancho"), Height=I(0.1), CornerRadius=I(0.25)),
+            rect("MascCaja", (-385, -231), Width=I(0.52, f"{h}.Ancho"), Height=I(d + 2 * pad), CornerRadius=I(0.35)),
             solid("Caja", (1, 1, 1), (-385, -198), mask="MascCaja"),
-            ellipse("MascAvatar", (-330, -231), Center=I((0.27, 0.5), f"Point({xa}, 0.5)"), Width=I(d), Height=I(d))]
+            # avatar con la misma mascara que la caja (rectangulo con esquinas al maximo = circulo), para que las unidades coincidan
+            rect("MascAvatar", (-330, -231), Center=I((0.27, 0.5), f"Point({xa}, 0.5)"), Width=I(d), Height=I(d), CornerRadius=I(1))]
     if foto:
-        # el centro de la foto (un circulo del alto del cuadro) se escala al diametro del avatar: d / (1/Aspecto)
-        body += [Tool("Foto", "Transform", {"Input": I(link="Entrada"), "Size": I(d * 0.5625, f"{d:g}*{h}.Aspecto*{h}.ZoomFoto"),
-                                            "Center": I((0.5, 0.5), f"Point({xa} - {h}.FotoX*{d:g}*{h}.Aspecto*{h}.ZoomFoto, 0.5 - {h}.FotoY*{d:g}*{h}.ZoomFoto)")},
+        # el centro de la foto (un circulo del alto del cuadro, 1/aspecto en unidades de ancho) se escala al diametro del avatar
+        body += [Tool("Foto", "Transform", {"Input": I(link="Entrada"), "Size": I(d * 1.7778, f"{d:g}*{asp}*{h}.ZoomFoto"),
+                                            "Center": I((0.5, 0.5), f"Point({xa} - {h}.FotoX*{d:g}*{asp}*{h}.ZoomFoto, 0.5 - {h}.FotoY*{d:g}*{asp}*{h}.ZoomFoto)")},
                       pos=(-330, -264)),
                  merge("Avatar", "Base", "Foto", (-330, -198), blend=1, extra={"EffectMask": I(link="MascAvatar", out="Mask")})]
         body.insert(0, Tool("Entrada", "PipeRouter", pos=(-440, -264)))
@@ -2961,20 +2967,20 @@ def comentario(name, foto):
         body.append(solid("Avatar", (0.95, 0.3, 0.45), (-330, -198), mask="MascAvatar"))
     body += [
             styled("Cabecera", "Responder al comentario de @usuario", "Poppins", "Regular", 0.016, (-275, -231), rgb=(0.45, 0.45, 0.45),
-                   center=(0.31, 0.522), left=True),
+                   left=True),
             styled("Texto", "¿Cómo hiciste ese efecto?", "Poppins", "SemiBold", 0.026, (-220, -231), rgb=(0.08, 0.08, 0.08),
-                   center=(0.31, 0.478), left=True),
+                   left=True),
             merge("B1", "Base", "Caja", (-385, -132)), merge("B2", "B1", "Avatar", (-330, -132)),
             merge("B3", "B2", "Cabecera", (-275, -132)), merge("B4", "B3", "Texto", (-220, -132)),
             mover("Pop", "B4", (-165, -132), size=f"max(0, {pop(h, 0, 1)})")]
-    for tn in ("Cabecera", "Texto"):
-        next(t for t in body if t.name == tn).inputs["Center"] = I((0.31, 0.5), f"Point({x0} + {0.03 + d:g}, {0.522 if tn == 'Cabecera' else 0.478})")
+    for tn, dy in (("Cabecera", 0.018), ("Texto", -0.012)):
+        next(t for t in body if t.name == tn).inputs["Center"] = I((0.31, 0.5), f"Point({xt}, 0.5 + {dy:g}*{asp})")
     pubs = [pub("Cabecera", "StyledText", "Cabecera"), pub("Texto", "StyledText", "Comentario"),
             pub("Texto", "Font", "Fuente", group="f1"), pub("Texto", "Style", group="f1"), pub("Texto", "Size", "Tamaño del comentario", 0.026),
             pub_color("Caja", "Color de la burbuja", (1, 1, 1), "c1")]
     if foto:
         pubs += [pub(h, "ZoomFoto", "Zoom de la foto", 1), pub(h, "FotoX", "Encuadre X de la foto", 0),
-                 pub(h, "FotoY", "Encuadre Y de la foto", 0), pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625)]
+                 pub(h, "FotoY", "Encuadre Y de la foto", 0)]
     else:
         pubs.append(pub_color("Avatar", "Color del avatar", (0.95, 0.3, 0.45), "c2"))
     pubs += [pub(h, "Ancho", "Ancho de la burbuja", 0.52), pub(h, "Rebote", "Rebote", 1.2)]
@@ -3131,6 +3137,274 @@ def social_ranking(name, anim_):
     layers = [("Anim1", f"min(1, 4*{h}.U)*{h}.Xs"), ("Anim2", stage(h, 0.5, 1))]
     return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05, size_v=0.95)
 
+
+
+# ======================================================================= LOTE 13: iconos animados
+# Los iconos se dibujan con mascaras (rectangulos con esquinas al maximo = circulos, triangulos) en unidades del ancho
+# del cuadro; las alturas se pasan a coordenadas del cuadro con el aspecto de 'Formato vertical'.
+def icon_asp(h):
+    return f"iif({h}.Vertical > 0.5, 0.5625, 1.7778)"
+
+
+def ipt(h, dx, dy, cx="0.5", cy="0.5"):
+    return f"Point({cx} + ({dx}), {cy} + ({dy})*{icon_asp(h)})"
+
+
+def shape(name, h, pos, dx, dy, w, ht, rgb, radius=0, angle=None, alpha=1, border=None):
+    """Forma rectangular (o circular con radius=1) y su relleno de color. w/ht pueden ser numeros o expresiones."""
+    kw = {"Center": I((0.5, 0.5), ipt(h, dx, dy)), "Width": I(0.05, str(w)), "Height": I(0.05, str(ht)), "CornerRadius": I(radius)}
+    if angle is not None:
+        kw["Angle"] = I(0, str(angle))
+    if border is not None:
+        kw.update({"Solid": I(0), "BorderWidth": I(border)})
+    return [rect(f"M{name}", (pos[0], pos[1] - 33), **kw), solid(name, rgb, pos, alpha=alpha, mask=f"M{name}")]
+
+
+def triangle(name, h, pos, pts, rgb):
+    kw = {**mask_format(), **{f"Point{i}": I((0.5, 0.5), ipt(h, dx, dy)) for i, (dx, dy) in enumerate(pts, 1)}}
+    return [Tool(f"M{name}", "TriangleMask", kw, pos=(pos[0], pos[1] - 33)), solid(name, rgb, pos, mask=f"M{name}")]
+
+
+def chain(prefix, base, layers, x0, y):
+    """Apila capas [(herramienta, opacidad o None)] sobre 'base' con nombres propios (prefix1, prefix2...)."""
+    tools, last = [], base
+    for i, (fg, blend_expr) in enumerate(layers, 1):
+        tools.append(merge(f"{prefix}{i}", last, fg, (x0 + 22 * i, y), blend=1 if blend_expr else None, blend_expr=blend_expr))
+        last = f"{prefix}{i}"
+    return tools, last
+
+
+def icon_label(name, text, size, h, dy, pos, rgb=(1, 1, 1)):
+    t = styled(name, text, "Montserrat", "ExtraBold", size, pos, rgb=rgb, outline=((0, 0, 0), 0.06), soft=((0, 0, 0), (0.003, -0.006), 3))
+    t.inputs["Center"] = I((0.5, 0.4), ipt(h, 0, dy))
+    return t
+
+
+def tool_named(tools, name):
+    return next(t for t in tools if t.name == name)
+
+
+@register("Titles", "PRO_TTL_Icono_Like")
+def icono_like(name, anim_):
+    """Corazon de 'me gusta': aparece con rebote, suelta una explosion de puntos y late mientras dura el clip."""
+    h = "Like"
+    a = 0.09
+    o = a / (2 * 2 ** 0.5)
+    ucs, inputs = kit(h, 0.15, 0.08, [uc("Rebote", "Rebote", 1.5, 0, 3), uc("Latido", "Latido", 1, 0, 3)], {"Rebote": I(1.5), "Latido": I(1)})
+    red = (1, 0.18, 0.33)
+    body = [solid("Base", (0, 0, 0), (-440, -264), alpha=0)]
+    body += shape("Rombo", h, (-385, -198), 0, -a * 0.2, a, a, red, angle=45)
+    body += shape("LobuloI", h, (-330, -198), -o, -a * 0.2 + o, a, a, red, radius=1)
+    body += shape("LobuloD", h, (-275, -198), o, -a * 0.2 + o, a, a, red, radius=1)
+    for n in ("LobuloI", "LobuloD"):
+        color_from(tool_named(body, n), "Rombo")
+    burst = phase(h, 0.3, 1)
+    r = f"(0.06 + 0.07*{burst})"
+    for k in range(8):
+        ang = 2 * math.pi * k / 8 + 0.3
+        body += shape(f"Chispa{k}", h, (-385 + 22 * k, -330), f"{r}*{math.cos(ang):.4f}", f"{r}*{math.sin(ang):.4f}", 0.012, 0.012,
+                      (1, 0.8, 0.3), radius=1)
+    body.append(icon_label("Etiqueta", "¡DALE LIKE!", 0.035, h, -0.085, (-110, -264)))
+    t, corazon = chain("Corazon", "Base", [("Rombo", None), ("LobuloI", None), ("LobuloD", None)], -385, -132)
+    body += t
+    latido = f"(1 + 0.06*{h}.Latido*max(0, sin(time*0.35))*max(0, sin(time*0.35))*iif({h}.U >= 1, 1, 0))"
+    body.append(mover("Pop", corazon, (-220, -132), size=f"max(0, {pop(h, 0, 0.6)})*{latido}"))
+    t, chispas = chain("Chispas", "Base", [(f"Chispa{k}", None) for k in range(8)], -385, -99)
+    body += t
+    layers = [(chispas, f"{h}.Xs*{burst}*(1 - {burst})*4"), ("Pop", f"{h}.Xs*min(1, 3*{h}.U)"), ("Etiqueta", stage(h, 0.5, 1))]
+    pubs = [pub_color("Rombo", "Color del corazón", red, "c1"), pub("Etiqueta", "StyledText", "Texto"),
+            pub(h, "Rebote", "Rebote", 1.5), pub(h, "Latido", "Latido", 1)]
+    return style_title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Icono_Play")
+def icono_play(name, anim_):
+    """Boton de reproducir estilo YouTube: entra con rebote, pulsa suavemente y lleva un texto debajo."""
+    h = "Play"
+    ucs, inputs = kit(h, 0.15, 0.08, [uc("Rebote", "Rebote", 1.4, 0, 3)], {"Rebote": I(1.4)})
+    body = [solid("Base", (0, 0, 0), (-440, -264), alpha=0)]
+    body += shape("Boton", h, (-385, -198), 0, 0, 0.16, 0.112, (1, 0.05, 0.05), radius=0.35)
+    body += triangle("Triangulo", h, (-330, -198), [(-0.022, 0.028), (-0.022, -0.028), (0.032, 0)], (1, 1, 1))
+    body.append(icon_label("Etiqueta", "MIRA EL VIDEO COMPLETO", 0.03, h, -0.1, (-110, -264)))
+    t, boton = chain("Icono", "Base", [("Boton", None), ("Triangulo", None)], -385, -132)
+    body += t
+    pulso = f"(1 + 0.03*sin(time*0.2)*iif({h}.U >= 1, 1, 0))"
+    body.append(mover("Pop", boton, (-220, -132), size=f"max(0, {pop(h, 0, 0.6)})*{pulso}"))
+    layers = [("Pop", f"{h}.Xs*min(1, 3*{h}.U)"), ("Etiqueta", stage(h, 0.45, 1))]
+    pubs = [pub_color("Boton", "Color del botón", (1, 0.05, 0.05), "c1"), pub_color("Triangulo", "Color del triángulo", (1, 1, 1), "c2"),
+            pub("Etiqueta", "StyledText", "Texto"), pub(h, "Rebote", "Rebote", 1.4)]
+    return style_title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Icono_Checklist")
+def icono_checklist(name, anim_):
+    """Lista con tres puntos que se van marcando con un check verde que salta (tutoriales, pasos, 'cosas que necesitas')."""
+    h = "Lista"
+    asp = icon_asp(h)
+    ucs, inputs = kit(h, 0.6, 0.08, [uc("Rebote", "Rebote", 1.6, 0, 3)], {"Rebote": I(1.6)})
+    green = (0.2, 0.8, 0.4)
+    body = [solid("Base", (0, 0, 0), (-440, -330), alpha=0)]
+    layers = []
+    for i, txt in enumerate(("Primer paso", "Segundo paso", "Tercer paso")):
+        y = 0.075 - 0.075 * i
+        a0 = i / 3
+        x = -385 + 165 * i
+        body += shape(f"Circulo{i}", h, (x, -264), 0, 0, 0.05, 0.05, green, radius=1)
+        body += shape(f"Corto{i}", h, (x + 33, -264), -0.008, -0.003, 0.006, 0.016, (1, 1, 1), angle=45)
+        body += shape(f"Largo{i}", h, (x + 66, -264), 0.005, 0.002, 0.006, 0.03, (1, 1, 1), angle=-40)
+        if i:
+            color_from(tool_named(body, f"Circulo{i}"), "Circulo0")
+        t = styled(f"Texto{i}", txt, "Poppins", "SemiBold", 0.035, (x + 99, -264), left=True, soft=((0, 0, 0), (0.003, -0.005), 3))
+        t.inputs["Center"] = I((0.36, 0.5), ipt(h, -0.14, y))
+        body.append(t)
+        tt, check = chain(f"Check{i}_", "Base", [(f"Circulo{i}", None), (f"Corto{i}", None), (f"Largo{i}", None)], x, -198)
+        body += tt
+        s = f"max(0, {pop(h, a0 + 0.08, a0 + 0.3)})"
+        # el check se dibuja en el centro del cuadro y se lleva a su fila: escalar y luego mover
+        body.append(Tool(f"Salto{i}", "Transform", {"Input": I(link=check), "Size": I(1, s),
+                                                    "Center": I((0.5, 0.5), f"Point(0.5 - 0.18, 0.5 + {y:g}*{asp})")}, pos=(x + 99, -198)))
+        layers += [(f"Texto{i}", stage(h, a0, a0 + 0.2)), (f"Salto{i}", f"{h}.Xs*iif({h}.U > {a0 + 0.08:g}, 1, 0)")]
+        if i:
+            t.inputs.update({"Font": I("Poppins", "Texto0.Font"), "Style": I("SemiBold", "Texto0.Style")})
+    pubs = [pub(f"Texto{i}", "StyledText", f"Punto {i + 1}") for i in range(3)]
+    pubs += [pub("Texto0", "Font", "Fuente", group="f1"), pub("Texto0", "Style", group="f1"),
+             pub_color("Circulo0", "Color del check", green, "c1"), pub(h, "Rebote", "Rebote", 1.6)]
+    return style_title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Icono_Ubicacion")
+def icono_ubicacion(name, anim_):
+    """Pin de ubicacion que cae y rebota sobre su sombra, con el nombre del lugar en una etiqueta (viajes, vlogs)."""
+    h = "Ubicacion"
+    asp = icon_asp(h)
+    ucs, inputs = kit(h, 0.3, 0.08, [uc("Rebote", "Rebote", 1.4, 0, 3)], {"Rebote": I(1.4)})
+    red = (0.95, 0.2, 0.25)
+    drop = f"max(0, {pop(h, 0, 0.7)})"
+    body = [solid("Base", (0, 0, 0), (-440, -264), alpha=0)]
+    body += shape("Sombra", h, (-385, -330), 0, -0.058, f"0.02 + 0.03*{drop}", 0.012, (0, 0, 0), radius=1, alpha=0.45)
+    body += shape("Cabeza", h, (-330, -198), 0, 0.02, 0.07, 0.07, red, radius=1)
+    body += triangle("Punta", h, (-275, -198), [(-0.03, 0.006), (0.03, 0.006), (0, -0.055)], red)
+    body += shape("Hueco", h, (-220, -198), 0, 0.02, 0.025, 0.025, (1, 1, 1), radius=1)
+    color_from(tool_named(body, "Punta"), "Cabeza")
+    t, pin = chain("Pin", "Base", [("Cabeza", None), ("Punta", None), ("Hueco", None)], -385, -132)
+    body += t
+    body.append(Tool("Caida", "Transform", {"Input": I(link=pin), "Center": I((0.5, 0.5), f"Point(0.5, 0.5 + 0.2*(1 - {drop})*{asp})")},
+                     pos=(-220, -132)))
+    lbl = styled("Lugar", "Ciudad de México", "Poppins", "SemiBold", 0.032, (-110, -264), rgb=(0.08, 0.08, 0.08),
+                 box=((1, 1, 1), 0.02, 0.012, 0.4))
+    lbl.inputs["Center"] = I((0.5, 0.4), ipt(h, 0, -0.1))
+    body.append(lbl)
+    layers = [("Sombra", f"{h}.Xs*min(1, 2*{h}.U)"), ("Caida", f"{h}.Xs*min(1, 4*{h}.U)"), ("Lugar", stage(h, 0.6, 1))]
+    pubs = [pub("Lugar", "StyledText", "Lugar"), pub("Lugar", "Font", "Fuente", group="f1"), pub("Lugar", "Style", group="f1"),
+            pub_color("Cabeza", "Color del pin", red, "c1"), pub(h, "Rebote", "Rebote", 1.4)]
+    return style_title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Icono_Flecha")
+def icono_flecha(name, anim_):
+    """Flecha que senala y rebota sin parar en su direccion (para indicar un boton, un objeto o 'mira aqui')."""
+    h = "Flecha"
+    asp = icon_asp(h)
+    th = f"({h}.Angulo*{PI}/180)"
+    ucs, inputs = kit(h, 0.12, 0.08, [uc("Angulo", "Ángulo (0 = hacia abajo)", 0, -180, 180), uc("Rebote", "Rebote", 1.4, 0, 3),
+                                      uc("Recorrido", "Recorrido del rebote", 0.02, 0, 0.1)],
+                      {"Angulo": I(0), "Rebote": I(1.4), "Recorrido": I(0.02)})
+    yellow = (1, 0.85, 0.1)
+    body = [solid("Base", (0, 0, 0), (-440, -264), alpha=0)]
+    body += shape("Asta", h, (-385, -198), 0, 0.03, 0.022, 0.07, yellow)
+    body += triangle("Punta", h, (-330, -198), [(-0.04, 0), (0.04, 0), (0, -0.05)], yellow)
+    color_from(tool_named(body, "Punta"), "Asta")
+    t, flecha = chain("Icono", "Base", [("Asta", None), ("Punta", None)], -385, -132)
+    body += t
+    bob = f"{h}.Recorrido*sin(time*0.25)"
+    body.append(Tool("Mover", "Transform", {"Input": I(link=flecha), "Angle": I(0, f"{h}.Angulo"), "Size": I(1, f"max(0, {pop(h, 0, 1)})"),
+                                            "Center": I((0.5, 0.5), f"Point(0.5 + {bob}*sin({th}), 0.5 - {bob}*cos({th})*{asp})")},
+                     pos=(-220, -132)))
+    layers = [("Mover", f"{h}.Xs*min(1, 3*{h}.U)")]
+    pubs = [pub(h, "Angulo", "Ángulo (0 = hacia abajo)", 0), pub_color("Asta", "Color", yellow, "c1"),
+            pub(h, "Recorrido", "Recorrido del rebote", 0.02), pub(h, "Rebote", "Rebote", 1.4)]
+    return style_title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Icono_Estrellas")
+def icono_estrellas(name, anim_):
+    """Valoracion de 1 a 5 estrellas que aparecen una a una (resenas, productos, recomendaciones)."""
+    h = "Estrellas"
+    ucs, inputs = kit(h, 0.35, 0.08, [uc("Valoracion", "Estrellas encendidas", 5, 0, 5, integer=True), uc("Rebote", "Rebote", 1.6, 0, 3)],
+                      {"Valoracion": I(5), "Rebote": I(1.6)})
+    gold = (1, 0.78, 0.1)
+    body = [solid("Oro", gold, (-440, -330))]
+    layers = []
+    for i in range(5):
+        a0 = i * 0.15
+        star = styled(f"Estrella{i}", "★", "Segoe UI Symbol", "Regular", 0.08, (-385 + 55 * i, -264), rgb=gold,
+                      soft=((0, 0, 0), (0.003, -0.005), 3))
+        star.inputs.update({f"{ch}1": I(1, f"iif({h}.Valoracion > {i}, Oro.TopLeft{ch}, 0.35)") for ch in ("Red", "Green", "Blue")})
+        body += [star, mover(f"Pop{i}", f"Estrella{i}", (-385 + 55 * i, -198), cx=f"{0.5 + 0.075 * (i - 2):g}",
+                             size=f"max(0, {pop(h, a0, a0 + 0.4)})")]
+        layers.append((f"Pop{i}", f"{h}.Xs*iif({h}.U > {a0:g}, 1, 0)"))
+    body.append(icon_label("Etiqueta", "4.9 · +2.000 reseñas", 0.028, h, -0.06, (-110, -264)))
+    layers.append(("Etiqueta", stage(h, 0.7, 1)))
+    pubs = [pub(h, "Valoracion", "Estrellas encendidas", 5), pub_color("Oro", "Color de las estrellas", gold, "c1"),
+            pub("Etiqueta", "StyledText", "Texto"), pub(h, "Rebote", "Rebote", 1.6)]
+    return style_title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Icono_Redes")
+def icono_redes(name, anim_):
+    """Usuario de redes: circulo con '@' que salta y una pastilla que se abre con tu nombre de usuario ('sigueme en...')."""
+    h = "Redes"
+    ucs, inputs = kit(h, 0.3, 0.1, [uc("Rebote", "Rebote", 1.4, 0, 3), uc("Ancho", "Ancho de la pastilla", 0.36, 0.1, 1)],
+                      {"Rebote": I(1.4), "Ancho": I(0.36)})
+    grow = phase(h, 0.35, 1)
+    left = f"(-{h}.Ancho/2)"
+    w = f"max(0.07, {h}.Ancho*{grow})"
+    body = [solid("Base", (0, 0, 0), (-440, -264), alpha=0)]
+    body += shape("Pastilla", h, (-385, -198), f"{left} + {w}/2", 0, w, 0.07, (0.1, 0.1, 0.12), radius=1)
+    body += shape("Insignia", h, (-330, -198), f"{left} + 0.035", 0, 0.07, 0.07, (0.95, 0.25, 0.55), radius=1)
+    arroba = styled("Arroba", "@", "Montserrat", "Bold", 0.045, (-275, -198))
+    arroba.inputs["Center"] = I((0.5, 0.5), ipt(h, f"{left} + 0.035", -0.003))
+    usuario = styled("Usuario", "@tuusuario", "Poppins", "SemiBold", 0.032, (-220, -198), left=True)
+    usuario.inputs["Center"] = I((0.5, 0.5), ipt(h, f"{left} + 0.085", 0))
+    body += [arroba, usuario]
+    t, insignia = chain("Circulo", "Base", [("Insignia", None), ("Arroba", None)], -385, -132)
+    body += t
+    s = f"max(0, {pop(h, 0, 0.4)})"
+    # la insignia esta a la izquierda: se escala respecto al centro del cuadro y se compensa el desplazamiento
+    body.append(Tool("Salto", "Transform", {"Input": I(link=insignia), "Size": I(1, s),
+                                            "Center": I((0.5, 0.5), f"Point(0.5 + ({left} + 0.035)*(1 - {s}), 0.5)")}, pos=(-220, -132)))
+    layers = [("Pastilla", f"{h}.Xs*iif({h}.U > 0.35, 1, 0)"), ("Salto", f"{h}.Xs*min(1, 3*{h}.U)"), ("Usuario", stage(h, 0.6, 1))]
+    pubs = [pub("Usuario", "StyledText", "Usuario"), pub("Arroba", "StyledText", "Símbolo"),
+            pub_color("Insignia", "Color del círculo", (0.95, 0.25, 0.55), "c1"), pub_color("Pastilla", "Color de la pastilla", (0.1, 0.1, 0.12), "c2"),
+            pub(h, "Ancho", "Ancho de la pastilla", 0.36), pub(h, "Rebote", "Rebote", 1.4)]
+    return style_title(name, h, ucs, inputs, body, layers, pubs)
+
+
+@register("Titles", "PRO_TTL_Icono_Cursor")
+def icono_cursor(name, anim_):
+    """Cursor que se desliza hasta el centro y hace clic, con una onda que se expande (tutoriales y 'haz clic aqui')."""
+    h = "Cursor"
+    asp = icon_asp(h)
+    ucs, inputs = kit(h, 0.5, 0.08, [uc("DesdeX", "Viene desde X", 0.18, -0.5, 0.5), uc("DesdeY", "Viene desde Y", -0.12, -0.5, 0.5)],
+                      {"DesdeX": I(0.18), "DesdeY": I(-0.12)})
+    mv = phase(h, 0, 0.7)
+    click = clamp01(f"({h}.U - 0.7)/0.3")
+    press = f"(1 - 0.18*sin({click}*{PI}))"
+    body = [solid("Base", (0, 0, 0), (-440, -264), alpha=0)]
+    body += triangle("Borde", h, (-385, -198), [(-0.004, 0.006), (-0.004, -0.062), (0.044, -0.03)], (0.05, 0.05, 0.05))
+    body += triangle("Flecha", h, (-330, -198), [(0, 0), (0, -0.05), (0.035, -0.027)], (1, 1, 1))
+    body += shape("Cola", h, (-275, -198), 0.016, -0.05, 0.01, 0.026, (1, 1, 1), angle=25)
+    body += shape("Onda", h, (-220, -198), 0, 0, f"0.02 + 0.09*{click}", f"0.02 + 0.09*{click}", (1, 1, 1), radius=1, border=0.003)
+    color_from(tool_named(body, "Cola"), "Flecha")
+    t, cursor = chain("Icono", "Base", [("Borde", None), ("Flecha", None), ("Cola", None)], -385, -132)
+    body += t
+    body.append(Tool("Movimiento", "Transform", {"Input": I(link=cursor), "Size": I(1, press),
+                                                 "Center": I((0.5, 0.5), f"Point(0.5 + {h}.DesdeX*(1 - {mv}), 0.5 + {h}.DesdeY*(1 - {mv})*{asp})")},
+                     pos=(-220, -132)))
+    layers = [("Onda", f"{h}.Xs*{click}*(1 - {click})*4*iif({h}.U >= 0.7, 1, 0)"), ("Movimiento", f"{h}.Xs*min(1, 4*{h}.U)")]
+    pubs = [pub_color("Flecha", "Color del cursor", (1, 1, 1), "c1"), pub_color("Onda", "Color de la onda", (1, 1, 1), "c2"),
+            pub(h, "DesdeX", "Viene desde X", 0.18), pub(h, "DesdeY", "Viene desde Y", -0.12)]
+    return style_title(name, h, ucs, inputs, body, layers, pubs)
 
 if __name__ == "__main__":
     for (cat, name), fn in BUILT.items():

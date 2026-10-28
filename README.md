@@ -2,14 +2,14 @@
 
 Paquete de recursos para DaVinci Resolve 20/21 **Studio** en Windows: transiciones, títulos, efectos y generadores de Fusion, más LUTs y DCTL de color. Todo lleva el prefijo `PRO_` y se agrupa en **PRO Pack** dentro de cada categoría de la Effects Library.
 
-> **Estado:** las 51 plantillas de los lotes 1 a 7 cargan en Resolve 20.3 (comprobado en su registro: 422 plantillas en total, sin errores). Las de los lotes 8 a 12 pasan el validador pero aún no se han abierto en Resolve. El **aspecto visual** de cada pieza está sin revisar: hazlo con [CHECKLIST_PRUEBAS.md](CHECKLIST_PRUEBAS.md).
+> **Estado:** las 51 plantillas de los lotes 1 a 7 cargan en Resolve 20.3 (comprobado en su registro: 422 plantillas en total, sin errores). Las de los lotes 8 a 13 pasan el validador pero aún no se han abierto en Resolve. El **aspecto visual** de cada pieza está sin revisar: hazlo con [CHECKLIST_PRUEBAS.md](CHECKLIST_PRUEBAS.md).
 
 ## Contenido
 
 | Categoría | Cantidad | Ejemplos |
 |---|---|---|
 | Transiciones | 25 | Destello de lente, zoom a través, cambio de canal, apagón, corte diagonal, puertas, rebote, revelado líquido, antes/después, blur dissolve, zoom punch, zoom radial, whip pan, giro, remolino, barras, iris, light leak, film burn, glitch, salto de cinta, tira de película, quemado orgánico, empuje |
-| Títulos y gráficos | 28 | Comentario de TikTok, ranking, lower third, contador, barra de progreso, callout, end screen, suscríbete, cita, título de apertura, línea de tiempo, anillo giratorio, máquina de escribir, resaltador, texto con destello, neón, y 10 estilos de texto con su fuente (viral, gancho, trailer, elegante, minimal, documental, deportivo, retro 80, gamer, nota) |
+| Títulos y gráficos | 36 | Iconos animados (like, play, checklist, ubicación, flecha, estrellas, redes, cursor), comentario de TikTok, ranking, lower third, contador, barra de progreso, callout, end screen, suscríbete, cita, título de apertura, línea de tiempo, anillo giratorio, máquina de escribir, resaltador, texto con destello, neón, y 10 estilos de texto con su fuente (viral, gancho, trailer, elegante, minimal, documental, deportivo, retro 80, gamer, nota) |
 | Efectos | 44 | Comentario con foto, pulso al ritmo, estrobo, impact frames, clones, grano + halation, película completa (estilo Dehancer), proyector, lentes (anamórfico, vintage, lomo, flare), VHS, CRT, shake, punch-in, Ken Burns, letterbox, glow neón, duotono, halftone, sombra larga, animación de entrada/salida, pantalla dividida, cámaras (REC, seguridad, visión nocturna, térmica), rayos de luz, lluvia, nieve, eco, desenfoque de movimiento, reencuadre horizontal ↔ vertical, guía de zonas seguras, cámara digital Y2K |
 | Generadores | 10 | Fondo con luz, cuadrícula, degradado animado, bokeh, aurora, fuga de luz, estática de TV, cuenta regresiva de película, brasas, synthwave |
 | LUTs (.cube) | 8 | Teal & Orange, Frío Thriller, Film Suave, Película Print, B/N Contraste, Cozy Ámbar, Digicam Y2K, Limpio Luminoso |
@@ -68,7 +68,7 @@ Los looks (`.cube` y `.dctl`) esperan una imagen **Rec.709 Gamma 2.4**. Con mate
 
 ## Para desarrollar
 
-Las plantillas de los lotes 2 a 12 se generan con un script. Edita `tools/build_templates.py` (no los `.setting`) y regenera:
+Las plantillas de los lotes 2 a 13 se generan con un script. Edita `tools/build_templates.py` (no los `.setting`) y regenera:
 
 ```powershell
 python tools\build_templates.py   # regenera las plantillas generadas

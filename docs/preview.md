@@ -476,7 +476,7 @@ Es la misma burbuja que `PRO_TTL_Social_Comentario`, pero el avatar es una foto.
 1. Arrastra la foto del usuario (captura o imagen de perfil) a una pista **por encima** del vídeo y dale la duración que quieras.
 2. Aplícale el efecto `PRO_FX_Social_ComentarioFoto` (Effects › PRO Pack).
 3. La foto desaparece y queda solo la burbuja, con el centro de la foto recortado en círculo como avatar.
-4. Ajusta **Zoom de la foto** y **Encuadre X/Y** para centrar la cara. Pon el **Aspecto** de tu timeline (9:16 = 0.5625 por defecto).
+4. Ajusta **Zoom de la foto** y **Encuadre X/Y** para centrar la cara. En una timeline vertical marca **Formato vertical (9:16)**: así el círculo y los textos quedan dentro de la caja.
 
 Controles: los del comentario (cabecera, comentario, fuente, color, ancho, rebote, formato vertical, posición, escala) más zoom y encuadre de la foto.
 
@@ -489,3 +489,22 @@ Controles: los del comentario (cabecera, comentario, fuente, color, ancho, rebot
 | `PRO_TR_EstaticaTV` | Cambio de canal: ráfaga de estática con líneas y saltos | Estática, saltos, líneas |
 | `PRO_TR_Apagon` | La luz de A parpadea hasta apagarse y B se enciende parpadeando | Velocidad del parpadeo |
 | `PRO_TR_Corte` | Corte de espada: una línea blanca raja A en diagonal y las mitades se deslizan | Ángulo, distancia, color de la línea, aspecto |
+
+---
+
+# Lote 13: iconos animados (Titles › PRO Pack)
+
+Los iconos están dibujados con formas de Fusion: no necesitan imágenes ni fuentes de iconos. Todos tienen **Formato vertical (9:16)**: márcalo en timelines verticales para que las formas no se deformen. También tienen Posición, Escala y duración de entrada y salida.
+
+| Pieza | Para qué | Controles |
+|---|---|---|
+| `PRO_TTL_Icono_Like` | Corazón que aparece con rebote, suelta una explosión de puntos y late | Color, texto, rebote, latido |
+| `PRO_TTL_Icono_Play` | Botón de reproducir estilo YouTube que pulsa, con texto debajo | Color del botón y del triángulo, texto, rebote |
+| `PRO_TTL_Icono_Checklist` | Tres puntos que se marcan con un check verde que salta (pasos, tutoriales) | Puntos 1-3, fuente, color del check, rebote |
+| `PRO_TTL_Icono_Ubicacion` | Pin que cae y rebota sobre su sombra, con el nombre del lugar | Lugar, fuente, color, rebote |
+| `PRO_TTL_Icono_Flecha` | Flecha que señala y rebota sin parar | Ángulo, color, recorrido, rebote |
+| `PRO_TTL_Icono_Estrellas` | Valoración de 0 a 5 estrellas que aparecen una a una | Estrellas encendidas, color, texto, rebote |
+| `PRO_TTL_Icono_Redes` | Círculo con @ que salta y una pastilla que se abre con tu usuario | Usuario, símbolo, colores, ancho, rebote |
+| `PRO_TTL_Icono_Cursor` | Cursor que llega al centro y hace clic con una onda | Colores, punto de partida X/Y |
+
+Las estrellas usan el carácter ★ de la fuente Segoe UI Symbol, que viene con Windows.

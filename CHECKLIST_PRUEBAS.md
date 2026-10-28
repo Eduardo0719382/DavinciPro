@@ -174,3 +174,14 @@ Antes de probar, instala las fuentes de [docs/fuentes.md](docs/fuentes.md) (o co
 - [ ] 17.3 `TR_ZoomTraves`: con Punto de A en una cara, el zoom entra justo en ese punto y no se va hacia el centro.
 - [ ] 17.4 `TR_EstaticaTV` y `TR_Apagon` funcionan con duraciones de 10 y 30 fotogramas.
 - [ ] 17.5 `TR_Corte`: la línea aparece en diagonal y las mitades se separan **a lo largo** de la línea, sin huecos donde no toca. *Si el corte va en otra dirección que las mitades, el sentido del ángulo de las máscaras está al revés (como en 15.7).*
+
+## 18. Lote 13: iconos animados y comentario corregido
+- [ ] 18.1 `Social_Comentario` y `Social_ComentarioFoto` (con **Formato vertical** marcado si la timeline es 9:16): el avatar queda dentro de la caja blanca con margen, y los dos textos quedan a su derecha, centrados en vertical.
+- [ ] 18.2 El avatar es un círculo, no un cuadrado redondeado. *Si sale cuadrado, "CornerRadius = 1" no redondea del todo: avísame.*
+- [ ] 18.3 Aparecen 8 títulos `Icono_*` (el registro debe mostrar 488 plantillas).
+- [ ] 18.4 `Icono_Like`: el corazón tiene forma de corazón (dos círculos arriba y punta abajo), con puntos que salen hacia fuera.
+- [ ] 18.5 `Icono_Play` y `Icono_Ubicacion`: el triángulo aparece en su sitio. *Si no se ve, falla `TriangleMask` (Point1-3).*
+- [ ] 18.6 `Icono_Checklist`: los checks salen a la izquierda de cada texto, uno tras otro.
+- [ ] 18.7 `Icono_Flecha` con Ángulo 90: la flecha apunta a un lado y rebota en esa dirección.
+- [ ] 18.8 `Icono_Estrellas` con 4: cuatro estrellas doradas y una gris.
+- [ ] 18.9 `Icono_Redes` y `Icono_Cursor`: la pastilla se abre hacia la derecha; el cursor llega y hace clic con una onda.
