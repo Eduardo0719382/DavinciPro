@@ -145,3 +145,12 @@ Antes de probar, instala las fuentes de [docs/fuentes.md](docs/fuentes.md) (o co
 - [ ] 14.10 `Social_Reencuadre`: un clip 16:9 en una timeline 9:16 queda centrado, con fondo desenfocado y sin franjas negras. *Si el clip sale recortado o con franjas, dime cómo ajusta Resolve el clip (Image scaling) en tu proyecto.*
 - [ ] 14.11 `Social_ZonaSegura`: en vertical, las bandas rojas están arriba, abajo y a la derecha. Desmarcando "Vertical" se ven dos marcos verdes en 16:9.
 - [ ] 14.12 `Look_Digicam`: la fecha naranja aparece abajo a la derecha. `TR_Remolino`: la imagen se retuerce y termina limpia en el clip B.
+
+## 15. Lote 10: generadores y cambios en CintaPelicula
+- [ ] 15.1 `TR_CintaPelicula`: hay mucho menos polvo, rayas y parpadeo que antes, y una fuga de luz naranja cruza la imagen a mitad de la transición.
+- [ ] 15.2 Aparecen 6 generadores nuevos (el registro debe mostrar 462 plantillas).
+- [ ] 15.3 `GEN_Aurora`: manchas de color suaves que se mueven despacio, sin bordes visibles.
+- [ ] 15.4 `GEN_FugaLuz` y `GEN_Brasas` encima de un clip con modo Screen: solo se suma la luz, el negro desaparece. Las brasas **suben**. *Si bajan, avísame (sentido del centro de FastNoise, igual que en 13.16).*
+- [ ] 15.5 `GEN_EstaticaTV`: el ruido cambia en cada fotograma y una banda clara recorre la imagen de arriba abajo.
+- [ ] 15.6 `GEN_CuentaRegresiva`: el número baja de 5 a 1, uno por segundo, y la línea da una vuelta cada segundo. *Si el número no cambia, falla el texto por expresión (como en 12.1).*
+- [ ] 15.7 `GEN_Synthwave`: las líneas verticales de la rejilla convergen en el horizonte, debajo del sol. Marca "Formato vertical" en una timeline 9:16 y comprueba que siguen convergiendo. *Si forman una X o se abren hacia arriba, el sentido del ángulo de las máscaras está al revés: avísame.*

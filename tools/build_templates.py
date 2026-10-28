@@ -781,15 +781,27 @@ def tr_cinta_pelicula(name, anim):
               merge("ConA", "ConPerfD", "Saliente", (-55, 0)),
               merge("ConB", "ConA", "Entrante", (0, 0)),
               Tool("Parpadeo", "BrightnessContrast", {"Input": I(link="ConB"),
-                                                      "Gain": I(1, f"1 + 0.4*{h}.Danos*{bell}*sin(time*9.1)*sin(time*3.7 + 1)")}, pos=(55, 0))]
+                                                      "Gain": I(1, f"1 + 0.2*{h}.Danos*{bell}*sin(time*9.1)*sin(time*3.7 + 1)")}, pos=(55, 0))]
     t, last = blk_dust_scratch("Dano", "Parpadeo", h, 110)
     tools += t
-    ucs, inputs = film_host(h, anim, (440, 0), extra_ucs=[
-        uc("Alejamiento", "Alejamiento", 0.3, 0, 0.6), uc("Escala", "Escala interna", 1, 0, 2, clamp=False)],
-        extra_inputs={"Alejamiento": I(0.3), "Escala": I(1, f"1 - {h}.Alejamiento*{bell}")})
-    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), **inputs}, ucs, (440, 0)))
-    pubs = [pub(h, "Alejamiento", "Alejamiento", 0.3), pub(h, "Danos", "Daños de película", 1),
-            pub_color("LuzIzq", "Color de la luz en perforaciones", (0.92, 0.88, 0.78), 3)]
+    # fuga de luz calida que cruza la tira (como PRO_TR_LightLeak), maxima a mitad de la transicion
+    tools += [ellipse("FugaMasc1", (330, -132), SoftEdge=I(0.5), Width=I(0.9), Height=I(0.9),
+                      Center=I((0.5, 0.5), f"Point(-0.3 + 1.6*{p}, 0.6 + 0.1*{bell})")),
+              ellipse("FugaMasc2", (385, -132), SoftEdge=I(0.4), Width=I(0.6), Height=I(0.6),
+                      Center=I((0.5, 0.5), f"Point(1.2 - 1.2*{p}, 0.35)")),
+              solid("FugaColor1", (1, 0.55, 0.2), (330, -99), mask="FugaMasc1"),
+              solid("FugaColor2", (1, 0.25, 0.1), (385, -99), mask="FugaMasc2"),
+              merge("Fuga1", last, "FugaColor1", (385, 0), "Screen", blend=0, blend_expr=f"{h}.Fuga*{bell}"),
+              merge("Fuga2", "Fuga1", "FugaColor2", (440, 0), "Screen", blend=0, blend_expr=f"0.8*{h}.Fuga*{bell}")]
+    ucs, inputs = film_host(h, anim, (495, 0), extra_ucs=[
+        uc("Alejamiento", "Alejamiento", 0.3, 0, 0.6), uc("Fuga", "Fuga de luz", 0.7, 0, 1),
+        uc("Escala", "Escala interna", 1, 0, 2, clamp=False)],
+        extra_inputs={"Alejamiento": I(0.3), "Fuga": I(0.7), "Escala": I(1, f"1 - {h}.Alejamiento*{bell}")}, danos=0.35)
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Fuga2"), **inputs}, ucs, (495, 0)))
+    pubs = numbered([pub(h, "Alejamiento", "Alejamiento", 0.3), pub(h, "Danos", "Daños de película (polvo, rayas, parpadeo)", 0.35),
+                     pub_color("LuzIzq", "Color de la luz en perforaciones", (0.92, 0.88, 0.78), "c1"),
+                     pub(h, "Fuga", "Fuga de luz", 0.7), pub_color("FugaColor1", "Color principal de la fuga", (1, 0.55, 0.2), "c2"),
+                     pub_color("FugaColor2", "Color secundario de la fuga", (1, 0.25, 0.1), "c3")])
     return macro(name, [("Saliente", "Input"), ("Entrante", "Input")], pubs, h, tools, anim)
 
 
@@ -2471,6 +2483,234 @@ def tr_remolino(name, anim):
              Tool("Suaviza", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, f"6*{bell}"), "Input": I(link="Remolino")}, pos=(110, 0))]
     pubs = [pub(h, "Giro", "Giro (grados)", 400), pub(h, "Radio", "Radio del remolino", 1.2)]
     return macro(name, [(h, "Background"), (h, "Foreground")], pubs, "Suaviza", tools, anim)
+
+
+# ======================================================================= LOTE 10: generadores
+def color_from(tool, src):
+    """El fondo 'tool' toma el color del selector publicado en 'src'."""
+    tool.inputs.update({f"TopLeft{ch}": I(1, f"{src}.TopLeft{ch}") for ch in ("Red", "Green", "Blue")})
+    return tool
+
+
+@register("Generators", "PRO_GEN_Aurora")
+def gen_aurora(name, anim):
+    """Degradado de malla (aurora): cuatro manchas de color grandes que derivan y se mezclan sobre un fondo oscuro."""
+    h = "Aurora"
+    v = f"{h}.Velocidad"
+    blobs = [((0.3, 0.65), 0.9, (0.5, 0.2, 1)), ((0.7, 0.6), 0.8, (1, 0.3, 0.6)),
+             ((0.35, 0.3), 0.85, (0.1, 0.8, 1)), ((0.75, 0.3), 0.7, (1, 0.6, 0.2))]
+    tools = [solid("Fondo", (0.03, 0.02, 0.08), (-440, 0))]
+    last = "Fondo"
+    for i, ((x, y), size, col) in enumerate(blobs, 1):
+        ph = 1.7 * i
+        c = f"Point({x} + 0.22*sin(time*0.011*{v} + {ph:g}), {y} + 0.16*sin(time*0.0083*{v} + {ph * 1.3:g}))"
+        tools += [ellipse(f"MascMancha{i}", (-385 + 55 * i, -132), Center=I((x, y), c), Width=I(size), Height=I(size), SoftEdge=I(0.4)),
+                  solid(f"Mancha{i}", col, (-385 + 55 * i, -99), mask=f"MascMancha{i}"),
+                  merge(f"Capa{i}", last, f"Mancha{i}", (-385 + 55 * i, 0), "Screen", blend=0.8, blend_expr=f"{h}.Intensidad*0.8")]
+        last = f"Capa{i}"
+    tools.append(Tool("Fusion", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(60), "Input": I(link=last)}, pos=(-55, 0)))
+    t, last = blk_grain("Gr", "Fusion", None, 0, scale=80)
+    tools += t
+    tools[-1].inputs["Blend"] = I(0.03)
+    ucs = [uc("Velocidad", "Velocidad", 1, 0, 5), uc("Intensidad", "Intensidad", 1, 0, 1.5)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Velocidad": I(1), "Intensidad": I(1)}, ucs, (110, 0)))
+    pubs = numbered([pub_color("Fondo", "Color de fondo", (0.03, 0.02, 0.08), "c0"),
+                     *[pub_color(f"Mancha{i}", f"Color {i}", col, f"c{i}") for i, (_, _, col) in enumerate(blobs, 1)],
+                     pub(h, "Velocidad", "Velocidad", 1), pub(h, "Intensidad", "Intensidad", 1),
+                     pub("Fusion", "XBlurSize", "Suavidad", 60), pub("GrGrano", "Blend", "Textura", 0.03),
+                     pub(h, "Saturation", "Saturación", 1)])
+    return macro(name, [], pubs, h, tools)
+
+
+@register("Generators", "PRO_GEN_FugaLuz")
+def gen_fuga_luz(name, anim):
+    """Fuga de luz organica sobre negro. Ponla en una pista superior con modo de composicion Screen o Add."""
+    h = "Fuga"
+    v = f"{h}.Velocidad"
+    tools = [solid("Negro", (0, 0, 0), (-440, 0))]
+    last = "Negro"
+    for i, (scale, col, sp, ph) in enumerate(((1.4, (1, 0.5, 0.15), 1, 0), (2.2, (1, 0.2, 0.35), 1.6, 2)), 1):
+        y = -165 + 99 * (i - 1)
+        tools += [Tool(f"Forma{i}", "FastNoise", {**frame_format(), "Detail": I(2), "Contrast": I(1.6), "XScale": I(scale),
+                                                   "SeetheRate": I(0.01, f"0.01*{v}"),
+                                                   "Center": I((0.5, 0.5), f"Point(0.5 + time*0.002*{sp}*{v}, 0.5 + 0.1*sin(time*0.01*{v} + {ph}))")},
+                       pos=(-385, y)),
+                  Tool(f"Umbral{i}", "BrightnessContrast", {"Input": I(link=f"Forma{i}"), "Saturation": I(0),
+                                                             "Low": I(0.45, f"0.6 - 0.3*{h}.Cantidad"), "High": I(1)}, pos=(-330, y)),
+                  solid(f"Color{i}", col, (-330, y - 33)),
+                  merge(f"Tenido{i}", f"Umbral{i}", f"Color{i}", (-275, y), "Multiply"),
+                  merge(f"Capa{i}", last, f"Tenido{i}", (-220 + 55 * i, 0), "Screen", blend=1, blend_expr=f"{h}.Intensidad")]
+        last = f"Capa{i}"
+    tools += [ellipse("MascNucleo", (-110, -132), SoftEdge=I(0.5), Width=I(0.6), Height=I(0.6),
+                      Center=I((0.2, 0.7), f"Point(0.5 + 0.45*sin(time*0.009*{v}), 0.65 + 0.15*sin(time*0.006*{v} + 1))")),
+              solid("Nucleo", (1, 0.85, 0.6), (-110, -99), mask="MascNucleo"),
+              merge("ConNucleo", last, "Nucleo", (-55, 0), "Screen", blend=0.5, blend_expr=f"0.5*{h}.Intensidad"),
+              Tool("Difuso", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(30), "Input": I(link="ConNucleo")}, pos=(0, 0))]
+    ucs = [uc("Velocidad", "Velocidad", 1, 0, 5), uc("Intensidad", "Intensidad", 1, 0, 2), uc("Cantidad", "Cantidad de luz", 0.5, 0, 1)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Difuso"), "Velocidad": I(1), "Intensidad": I(1), "Cantidad": I(0.5)},
+                      ucs, (55, 0)))
+    pubs = numbered([pub(h, "Intensidad", "Intensidad", 1), pub(h, "Cantidad", "Cantidad de luz", 0.5), pub(h, "Velocidad", "Velocidad", 1),
+                     pub_color("Color1", "Color principal", (1, 0.5, 0.15), "c1"), pub_color("Color2", "Color secundario", (1, 0.2, 0.35), "c2"),
+                     pub_color("Nucleo", "Color del núcleo", (1, 0.85, 0.6), "c3"), pub("Difuso", "XBlurSize", "Suavidad", 30)])
+    return macro(name, [], pubs, h, tools)
+
+
+@register("Generators", "PRO_GEN_EstaticaTV")
+def gen_estatica_tv(name, anim):
+    """Estatica de television: ruido que cambia en cada fotograma, lineas de barrido y una banda que rueda."""
+    h = "Estatica"
+    tools = [Tool("Ruido", "FastNoise", {**frame_format(), "Detail": I(2), "Contrast": I(2.5), "XScale": I(220), "SeetheRate": I(5),
+                                         "Discontinuous": I(1)}, pos=(-385, 0)),
+             Tool("Grises", "BrightnessContrast", {"Input": I(link="Ruido"), "Saturation": I(0), "Contrast": I(0.2)}, pos=(-330, 0))]
+    t, last = blk_cast("Tinte", "Grises", -275, (1, 1, 1), 1)
+    tools += t
+    t, last = scanlines("Lineas", last, h, -165, high=0.6)
+    tools += t
+    tools += [rect("MascBanda", (-55, -99), Width=I(3), Height=I(0.08), SoftEdge=I(0.05),
+                   Center=I((0.5, 0.5), f"Point(0.5, 1.2 - 1.4*(time*0.01*{h}.VelBanda - floor(time*0.01*{h}.VelBanda)))")),
+              Tool("BandaLuz", "BrightnessContrast", {"Input": I(link=last), "Gain": I(1.6)}, pos=(-55, -66)),
+              merge("Banda", last, "BandaLuz", (0, 0), blend=1, blend_expr=f"{h}.Banda", extra={"EffectMask": I(link="MascBanda", out="Mask")})]
+    t, last = blk_vignette("Vin", "Banda", 55, amount=0.4)
+    tools += t
+    ucs = [uc("Lineas", "Líneas", 0.4, 0, 1), uc("NumLineas", "Número de líneas", 300, 50, 1000),
+           uc("Banda", "Banda que rueda", 0.6, 0, 1), uc("VelBanda", "Velocidad de la banda", 1, 0, 5)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Lineas": I(0.4), "NumLineas": I(300), "Banda": I(0.6), "VelBanda": I(1)},
+                      ucs, (165, 0)))
+    pubs = numbered([pub("Grises", "Contrast", "Contraste", 0.2), pub(h, "Gain", "Brillo", 1),
+                     pub_color("TinteColor", "Tinte", (1, 1, 1), "c1"), pub(h, "Lineas", "Líneas", 0.4),
+                     pub(h, "NumLineas", "Número de líneas", 300), pub(h, "Banda", "Banda que rueda", 0.6),
+                     pub(h, "VelBanda", "Velocidad de la banda", 1), pub("VinVineta", "Blend", "Viñeta", 0.4)])
+    return macro(name, [], pubs, h, tools)
+
+
+@register("Generators", "PRO_GEN_CuentaRegresiva")
+def gen_cuenta_regresiva(name, anim):
+    """Cola de pelicula (film leader): numeros que bajan cada segundo, aros, cruz y una linea que gira, con grano y parpadeo."""
+    h = "Cuenta"
+    fps = f"{h}.FPS"
+    n = f"max(1, {h}.Desde - floor(time/{fps}))"
+    tools = [solid("Fondo", (0.55, 0.55, 0.52), (-440, 0)), solid("Lienzo", (0, 0, 0), (-440, 66), alpha=0)]
+    marks = [("AroExt", ellipse("MascAroExt", (-385, -132), Width=I(0.5), Height=I(0.5), Solid=I(0), BorderWidth=I(0.004))),
+             ("AroInt", ellipse("MascAroInt", (-330, -132), Width=I(0.42), Height=I(0.42), Solid=I(0), BorderWidth=I(0.003))),
+             ("CruzH", rect("MascCruzH", (-275, -132), Width=I(2), Height=I(0.003))),
+             ("CruzV", rect("MascCruzV", (-220, -132), Width=I(0.003), Height=I(2))),
+             ("Barrido", rect("MascBarrido", (-165, -132), Width=I(0.005), Height=I(0.6),
+                              Angle=I(0, f"-360*(time/{fps} - floor(time/{fps}))")))]
+    layers = []
+    for i, (n_, m) in enumerate(marks):
+        tools += [m, color_from(solid(n_, (0.1, 0.1, 0.1), (-385 + 55 * i, -99), mask=m.name), "Lineas")]
+        layers.append((n_, None))
+    tools.insert(0, solid("Lineas", (0.1, 0.1, 0.1), (-440, -66)))
+    tools.append(text_tool("Numero", "5", 0.3, (0.5, 0.5), (-110, -99), rgb=(0.1, 0.1, 0.1), font="Arial", style="Bold",
+                           extra={"StyledText": I("5", f'Text(string.format("%d", {n}))')}))
+    next(t for t in tools if t.name == "Numero").inputs.update({f"{ch}1": I(1, f"Lineas.TopLeft{ch}") for ch in ("Red", "Green", "Blue")})
+    layers.append(("Numero", None))
+    t, over = compose(layers, x0=-55)
+    tools += t
+    tools.append(merge("Marcas", "Fondo", over, (220, 0), blend=1))
+    t, last = blk_grain("Gr", "Marcas", f"{h}.Grano", 275, scale=60)
+    tools += t
+    t, last = blk_vignette("Vin", last, 385, amount=0.5)
+    tools += t
+    ucs = [uc("Desde", "Empieza en", 5, 1, 10, integer=True), uc("FPS", "Fotogramas por segundo", 30, 1, 120),
+           uc("Grano", "Grano", 0.15, 0, 0.5), uc("Parpadeo", "Parpadeo", 1, 0, 5)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Desde": I(5), "FPS": I(30), "Grano": I(0.15), "Parpadeo": I(1),
+                                                "Gain": I(1, f"1 + {h}.Parpadeo*0.05*sin(time*9.1)*sin(time*4.3 + 1)")}, ucs, (495, 0)))
+    pubs = numbered([pub(h, "Desde", "Empieza en", 5), pub(h, "FPS", "Fotogramas por segundo", 30),
+                     pub_color("Fondo", "Color de fondo", (0.55, 0.55, 0.52), "c1"), pub_color("Lineas", "Color de líneas y número", (0.1, 0.1, 0.1), "c2"),
+                     pub("Numero", "Font", "Fuente del número", group="f1"), pub("Numero", "Style", group="f1"),
+                     pub(h, "Grano", "Grano", 0.15), pub(h, "Parpadeo", "Parpadeo", 1), pub("VinVineta", "Blend", "Viñeta", 0.5)])
+    return macro(name, [], pubs, h, tools)
+
+
+@register("Generators", "PRO_GEN_Brasas")
+def gen_brasas(name, anim):
+    """Brasas o chispas que suben y titilan sobre negro. Ponla encima con modo Screen o Add (fuego, epica, trailers)."""
+    h = "Brasas"
+    v = f"{h}.Velocidad"
+    tools = [solid("Negro", (0, 0, 0), (-440, 0)), solid("ColorBrasa", (1, 0.45, 0.1), (-440, -198))]
+    last = "Negro"
+    for i, (scale, low, blur, speed, ph) in enumerate(((70, 0.9, 1, 0.002, 0), (40, 0.92, 2, 0.0035, 2), (22, 0.94, 3.5, 0.005, 4)), 1):
+        y = -198 + 66 * (i - 1)
+        cx = f"0.5 + 0.015*sin(time*0.04*{v} + {ph})"
+        tools += [Tool(f"Chispas{i}", "FastNoise", {**frame_format(), "Detail": I(8), "Contrast": I(2.5), "XScale": I(scale),
+                                                     "SeetheRate": I(0.08),
+                                                     "Center": I((0.5, 0.5), f"Point({cx}, 0.5 + time*{speed}*{v})")}, pos=(-385, y)),
+                  Tool(f"Umbral{i}", "BrightnessContrast", {"Input": I(link=f"Chispas{i}"), "Saturation": I(0),
+                                                             "Low": I(low, f"{low} + (1 - {h}.Cantidad)*0.05"), "High": I(1)}, pos=(-330, y)),
+                  Tool(f"Suave{i}", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(blur), "Input": I(link=f"Umbral{i}")},
+                       pos=(-275, y)),
+                  merge(f"Tenido{i}", f"Suave{i}", "ColorBrasa", (-220, y), "Multiply"),
+                  merge(f"Capa{i}", last, f"Tenido{i}", (-165 + 55 * i, 0), "Screen", blend=1, blend_expr=f"{h}.Brillo")]
+        last = f"Capa{i}"
+    tools += [Tool("Resplandor", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(10), "Input": I(link=last)}, pos=(55, -66)),
+              merge("ConResplandor", last, "Resplandor", (55, 0), "Screen", blend=0.8)]
+    ucs = [uc("Cantidad", "Cantidad", 0.5, 0, 1), uc("Brillo", "Brillo", 1, 0, 2), uc("Velocidad", "Velocidad", 1, 0, 5)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConResplandor"), "Cantidad": I(0.5), "Brillo": I(1), "Velocidad": I(1)},
+                      ucs, (110, 0)))
+    pubs = numbered([pub(h, "Cantidad", "Cantidad", 0.5), pub(h, "Brillo", "Brillo", 1), pub(h, "Velocidad", "Velocidad", 1),
+                     pub_color("ColorBrasa", "Color", (1, 0.45, 0.1), "c1"), pub("ConResplandor", "Blend", "Resplandor", 0.8)])
+    return macro(name, [], pubs, h, tools)
+
+
+@register("Generators", "PRO_GEN_Synthwave")
+def gen_synthwave(name, anim):
+    """Atardecer synthwave: cielo degradado, sol con franjas y suelo con rejilla en perspectiva que avanza.
+    Los angulos de la rejilla se calculan aqui para 16:9 y 9:16 (casilla 'Formato vertical')."""
+    import math
+    from fusion_builder import gradient
+    h = "Synthwave"
+    vert = f"{h}.Vertical"
+    H = 0.42
+    tools = [Tool("Cielo", "Background", {**frame_format(), "Type": I(FuID("Gradient")), "Start": I((0.5, 1)), "End": I((0.5, H)),
+                                          "Gradient": I(gradient([(0, (0.05, 0, 0.12, 1)), (1, (0.6, 0.1, 0.5, 1))]))}, pos=(-550, 0)),
+             ellipse("MascSol", (-495, -165), Center=I((0.5, H + 0.14)), Width=I(0.3), Height=I(0.3)),
+             Tool("Sol", "Background", {"EffectMask": I(link="MascSol", out="Mask"), **frame_format(), "Type": I(FuID("Gradient")),
+                                        "Start": I((0.5, H + 0.4)), "End": I((0.5, H)),
+                                        "Gradient": I(gradient([(0, (1, 0.9, 0.3, 1)), (1, (1, 0.2, 0.55, 1))]))}, pos=(-495, -132)),
+             merge("ConSol", "Cielo", "Sol", (-440, 0))]
+    last = "ConSol"
+    for i, (y, ht) in enumerate(((H + 0.1, 0.006), (H + 0.065, 0.01), (H + 0.03, 0.014), (H + 0.003, 0.018))):
+        tools += [rect(f"MascFranja{i}", (-385 + 33 * i, -165), Center=I((0.5, y)), Width=I(0.4), Height=I(ht)),
+                  solid(f"Franja{i}", (0.6, 0.1, 0.5), (-385 + 33 * i, -132), mask=f"MascFranja{i}"),
+                  merge(f"ConFranja{i}", last, f"Franja{i}", (-385 + 33 * i, 0))]
+        last = f"ConFranja{i}"
+    tools += [rect("MascSuelo", (-220, -165), Center=I((0.5, H / 2)), Width=I(1.2),
+                   Height=I(H / 1.7778, f"iif({vert} > 0.5, {H / 0.5625:.4f}, {H / 1.7778:.4f})")),
+              solid("Suelo", (0.03, 0, 0.08), (-220, -132), mask="MascSuelo"),
+              merge("ConSuelo", last, "Suelo", (-220, 0)),
+              ellipse("MascHorizonte", (-165, -165), Center=I((0.5, H)), Width=I(1.4), Height=I(0.12), SoftEdge=I(0.15)),
+              solid("Resplandor", (1, 0.2, 0.8), (-165, -132), mask="MascHorizonte"),
+              merge("ConHorizonte", "ConSuelo", "Resplandor", (-165, 0), "Screen", blend=0.6, blend_expr=f"0.6*{h}.Brillo")]
+    last = "ConHorizonte"
+    f = f"(time*0.01*{h}.Velocidad - floor(time*0.01*{h}.Velocidad))"
+    nh = 10
+    for i in range(nh):
+        k = f"(({i} + {f})/{nh})"
+        tools += [rect(f"MascH{i}", (-110 + 22 * i, -198), Center=I((0.5, H), f"Point(0.5, {H} - {H}*{k}*{k})"), Width=I(1.2),
+                       Height=I(0.003, f"0.002 + 0.004*{k}")),
+                  color_from(solid(f"LineaH{i}", (1, 0.2, 0.8), (-110 + 22 * i, -165), mask=f"MascH{i}"), "Resplandor"),
+                  merge(f"RejH{i}", last, f"LineaH{i}", (-110 + 22 * i, 0), blend=1, blend_expr=f"{h}.Brillo*min(1, 2*{k})")]
+        last = f"RejH{i}"
+    for j in range(-7, 8):
+        xb = 0.5 + 0.16 * j
+        geo = {}
+        for tag, a in (("h", 1.7778), ("v", 0.5625)):
+            geo[tag] = (math.degrees(math.atan((xb - 0.5) * a / H)), math.hypot(xb - 0.5, H / a))
+        n = f"V{j + 7}"
+        tools += [rect(f"Masc{n}", (110 + 22 * (j + 7), -198), Center=I(((0.5 + xb) / 2, H / 2)), Width=I(0.003),
+                       Height=I(geo["h"][1], f"iif({vert} > 0.5, {geo['v'][1]:.4f}, {geo['h'][1]:.4f})"),
+                       Angle=I(geo["h"][0], f"iif({vert} > 0.5, {geo['v'][0]:.3f}, {geo['h'][0]:.3f})")),
+                  color_from(solid(f"Linea{n}", (1, 0.2, 0.8), (110 + 22 * (j + 7), -165), mask=f"Masc{n}"), "Resplandor"),
+                  merge(f"Rej{n}", last, f"Linea{n}", (110 + 22 * (j + 7), 0), blend=0.8, blend_expr=f"0.8*{h}.Brillo")]
+        last = f"Rej{n}"
+    ucs = [uc("Vertical", "Formato vertical (9:16)", 0, 0, 1, checkbox=True), uc("Velocidad", "Velocidad de la rejilla", 1, 0, 5),
+           uc("Brillo", "Brillo de las líneas", 1, 0, 2)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Vertical": I(0), "Velocidad": I(1), "Brillo": I(1)}, ucs, (495, 0)))
+    pubs = numbered([pub(h, "Vertical", "Formato vertical (9:16)", 0), pub(h, "Velocidad", "Velocidad de la rejilla", 1),
+                     pub(h, "Brillo", "Brillo de las líneas", 1), pub_color("Resplandor", "Color de las líneas", (1, 0.2, 0.8), "c1"),
+                     pub_color("Suelo", "Color del suelo", (0.03, 0, 0.08), "c2")])
+    return macro(name, [], pubs, h, tools)
 
 
 if __name__ == "__main__":

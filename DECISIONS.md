@@ -100,3 +100,9 @@
 - **Fuentes de Google Fonts (OFL) o de Windows, no comerciales:** el equipo tiene fuentes de pago o demo (Obviously, Integral CF, Futura Now). Se evitaron para que el paquete funcione en otra PC instalando solo fuentes gratuitas. Lato se cambió por Montserrat Light porque en este equipo está instalada como varias familias separadas ("Lato-Light"), y su nombre en Text+ es dudoso.
 - **Formato vertical:** una casilla mueve y escala el bloque completo. Las fuentes se miden respecto al ancho del cuadro, así que en 9:16 un texto ocupa el mismo porcentaje de ancho que en 16:9; la casilla lo saca de las zonas que tapa la interfaz.
 - **Investigación de tendencias:** CapCut (velocity edits, glitch, slow zoom) y Opus (11 estéticas de 2026: cozy/flat-lay, phone-first cinematic, video ensayo, UGC). Los nombres de fuentes vienen de guías de miniaturas y subtítulos (Montserrat, Anton, Bebas Neue, Poppins, Roboto).
+
+## D20. Lote 10: generadores y menos ruido en CintaPelicula
+- **CintaPelicula:** los daños bajan de 1 a 0.35 y el parpadeo de 0.4 a 0.2 (lo pediste: "disminuir el ruido"). Se añade la misma fuga de luz que `PRO_TR_LightLeak` (dos óvalos de color en Screen que cruzan la imagen), con su control y colores.
+- **Generadores elegidos:** los recursos más ofrecidos en los bancos de stock son las fugas de luz, las colas de película (countdown), las escenas synthwave y los degradados aurora o de malla. Se añadieron, junto con estática de TV y brasas, que son los fondos y overlays más comunes en intros y transiciones.
+- **Rejilla synthwave sin atan:** las expresiones de Fusion no tienen `atan`. Los ángulos y largos de las 15 líneas verticales se calculan en el script para 16:9 y 9:16, y una casilla elige entre los dos.
+- **Overlays sobre negro:** FugaLuz y Brasas salen sobre negro opaco en lugar de transparentes, para que el modo Screen o Add de la pista los combine sin depender del canal alfa.

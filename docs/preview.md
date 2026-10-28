@@ -256,8 +256,8 @@ Como cuando la película se sale del arrastre del proyector: el clip A sube, se 
 | Daños de película | 1 |
 
 ### PRO_TR_CintaPelicula (tira de película con perforaciones)
-La imagen se aleja y deja ver la tira de película con sus perforaciones iluminadas. La cinta avanza un fotograma y vuelve a acercarse en el clip B. Duración ideal: 20-40 fotogramas.
-Controles: Alejamiento (0.3), Daños de película, Color de la luz en perforaciones.
+La imagen se aleja y deja ver la tira de película con sus perforaciones iluminadas. La cinta avanza un fotograma y vuelve a acercarse en el clip B, mientras una fuga de luz cálida la cruza. Duración ideal: 20-40 fotogramas.
+Controles: Alejamiento (0.3), Daños de película (0.35: polvo, rayas y parpadeo suaves), Color de la luz en perforaciones, Fuga de luz (0.7) y sus dos colores.
 
 ### PRO_TR_QuemaOrganica (quemado con formas irregulares)
 Manchas de quemado con bordes naranjas y núcleo blanco que nacen del ruido y crecen hasta cubrir la imagen. Mientras tanto, la imagen se sobreexpone, vibra y se llena de polvo y rayas. Duración ideal: 20-45 fotogramas.
@@ -428,3 +428,20 @@ Todos los estilos tienen **Formato vertical (9:16)**, Posición, Escala y duraci
 | `PRO_Look_CozyAmbar` | Estética cozy y flat-lay: cálido, ámbar, verdes apagados |
 | `PRO_Look_DigicamY2K` | Cámara digital: contraste y saturación altos, sombras frías (combínalo con `Look_Digicam`) |
 | `PRO_Look_LimpioLuminoso` | "Clean girl" o lifestyle: luminoso, poco contraste, piel rosada |
+
+---
+
+# Lote 10: generadores (Generators › PRO Pack)
+
+Los que van "sobre negro" se usan en una pista superior con **Composite Mode = Screen** (o Add) en el Inspector, para que solo se sume la luz.
+
+| Pieza | Para qué | Controles |
+|---|---|---|
+| `PRO_GEN_Aurora` | Degradado de malla: cuatro manchas de color que derivan y se mezclan. Fondo moderno para títulos, intros y reels | Color de fondo, Colores 1-4, velocidad, intensidad, suavidad, textura, saturación |
+| `PRO_GEN_FugaLuz` | Fuga de luz orgánica sobre negro, para poner encima de cualquier plano (modo Screen) | Intensidad, cantidad de luz, velocidad, tres colores, suavidad |
+| `PRO_GEN_EstaticaTV` | Estática de televisión con líneas y banda que rueda; entre cortes o como pantalla apagada | Contraste, brillo, tinte, líneas, banda, viñeta |
+| `PRO_GEN_CuentaRegresiva` | Cola de película: números que bajan cada segundo, aros, cruz y línea que gira, con grano | Empieza en, FPS, colores, fuente, grano, parpadeo, viñeta |
+| `PRO_GEN_Brasas` | Chispas que suben y titilan sobre negro (modo Screen): fuego, épica, trailers | Cantidad, brillo, velocidad, color, resplandor |
+| `PRO_GEN_Synthwave` | Atardecer synthwave: cielo degradado, sol con franjas y rejilla en perspectiva que avanza. Combina con `Estilo_Retro80` | Formato vertical, velocidad, brillo y color de las líneas, color del suelo |
+
+**Lo que Resolve ya trae** (Effects Library › Generators): Starfield, Paper, Polka Dots, Radial Lines, Soft Waves, Honeycomb y otros. No se duplicaron.
