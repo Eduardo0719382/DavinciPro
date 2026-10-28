@@ -1,0 +1,215 @@
+{
+	Tools = ordered() {
+		PRO_TR_RevelaLiquido = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "EntradaA", Source = "Input", },
+				MainInput2 = InstanceInput { SourceOp = "EntradaB", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Liquido", Source = "Suavidad", Name = "Suavidad del borde", Default = 0.04, },
+				Input2 = InstanceInput { SourceOp = "Liquido", Source = "Borde", Name = "Borde de color", Default = 0.6, },
+				Input3 = InstanceInput { SourceOp = "ColorBorde", Source = "TopLeftRed", Name = "Color del borde", ControlGroup = 3, Default = 1, },
+				Input4 = InstanceInput { SourceOp = "ColorBorde", Source = "TopLeftGreen", ControlGroup = 3, Default = 1, },
+				Input5 = InstanceInput { SourceOp = "ColorBorde", Source = "TopLeftBlue", ControlGroup = 3, Default = 1, },
+				Input6 = InstanceInput { SourceOp = "Manchas", Source = "XScale", Name = "Tamaño de las manchas (más alto = más pequeñas)", Default = 3, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Liquido", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				EntradaA = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -385, -66 } },
+				},
+				EntradaB = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -385, 66 } },
+				},
+				Manchas = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 6, },
+						Contrast = Input { Value = 1.6, },
+						XScale = Input { Value = 3, },
+						SeetheRate = Input { Value = 0.02, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, -198 } },
+				},
+				Forma = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Manchas", Source = "Output", },
+						Saturation = Input { Value = 0, },
+						Low = Input { Value = 1, Expression = "1 - 1.25*(Liquido.Progreso)*(Liquido.Progreso)*(3-2*(Liquido.Progreso))", },
+						High = Input { Value = 1.04, Expression = "1 - 1.25*(Liquido.Progreso)*(Liquido.Progreso)*(3-2*(Liquido.Progreso)) + Liquido.Suavidad", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -198 } },
+				},
+				FormaBorde = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Manchas", Source = "Output", },
+						Saturation = Input { Value = 0, },
+						Low = Input { Value = 1, Expression = "1 - 1.25*(Liquido.Progreso)*(Liquido.Progreso)*(3-2*(Liquido.Progreso)) + 0.06", },
+						High = Input { Value = 1.1, Expression = "1 - 1.25*(Liquido.Progreso)*(Liquido.Progreso)*(3-2*(Liquido.Progreso)) + 0.06 + Liquido.Suavidad", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -264 } },
+				},
+				Blanco = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -264 } },
+				},
+				FormaInv = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Blanco", Source = "Output", },
+						Foreground = Input { SourceOp = "Forma", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Difference" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -198 } },
+				},
+				ParteA = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "EntradaA", Source = "Output", },
+						Foreground = Input { SourceOp = "FormaInv", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				ParteB = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "EntradaB", Source = "Output", },
+						Foreground = Input { SourceOp = "Forma", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 66 } },
+				},
+				Suma = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ParteA", Source = "Output", },
+						Foreground = Input { SourceOp = "ParteB", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+						SubtractiveAdditive = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+				Banda = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "FormaBorde", Source = "Output", },
+						Foreground = Input { SourceOp = "Forma", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Difference" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -264 } },
+				},
+				ColorBorde = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -297 } },
+				},
+				BandaTenida = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Banda", Source = "Output", },
+						Foreground = Input { SourceOp = "ColorBorde", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -264 } },
+				},
+				ConBorde = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Suma", Source = "Output", },
+						Foreground = Input { SourceOp = "BandaTenida", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.6, Expression = "Liquido.Borde*sin(Liquido.Progreso*3.14159265)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+				},
+				Liquido = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "ConBorde", Source = "Output", },
+						Progreso = Input { SourceOp = "PRORevelaLiquidoAnim", Source = "Value", },
+						Suavidad = Input { Value = 0.04, },
+						Borde = Input { Value = 0.6, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Suavidad = {
+							LINKS_Name = "Suavidad del borde",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.04,
+							INP_MinScale = 0.005,
+							INP_MaxScale = 0.3,
+							INP_MinAllowed = 0.005,
+							INP_MaxAllowed = 0.3,
+							ICS_ControlPage = "Controls",
+						},
+						Borde = {
+							LINKS_Name = "Borde de color",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.6,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PRORevelaLiquidoAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_RevelaLiquido"
+}

@@ -445,3 +445,24 @@ Los que van "sobre negro" se usan en una pista superior con **Composite Mode = S
 | `PRO_GEN_Synthwave` | Atardecer synthwave: cielo degradado, sol con franjas y rejilla en perspectiva que avanza. Combina con `Estilo_Retro80` | Formato vertical, velocidad, brillo y color de las líneas, color del suelo |
 
 **Lo que Resolve ya trae** (Effects Library › Generators): Starfield, Paper, Polka Dots, Radial Lines, Soft Waves, Honeycomb y otros. No se duplicaron.
+
+---
+
+# Lote 11: dinámicos para videos virales
+
+**Efectos al ritmo:** `PulsoRitmo`, `Estrobo`, `Clones` (y `ImpactoFrames` con "Repetir en cada golpe") usan **BPM**, **FPS** y **Desfase**. Pon el BPM de la canción y el FPS de la timeline. Mueve el desfase hasta que el primer golpe del efecto caiga en el primer golpe de la música. Aplícalos a un **Adjustment Clip** que cubra todo el tramo.
+
+| Pieza | Para qué | Controles |
+|---|---|---|
+| `PRO_FX_Din_PulsoRitmo` | Zoom (y opcionalmente flash y sacudida) en cada golpe de la música: el clásico edit al ritmo | BPM, FPS, desfase, zoom, flash, sacudida, rapidez de la caída |
+| `PRO_FX_Din_Estrobo` | En golpes alternos, la imagen pasa a blanco y negro duro o a negativo | BPM, FPS, desfase, negativo, intensidad, contraste |
+| `PRO_FX_Din_ImpactoFrames` | Impact frames de anime: fotogramas en blanco y negro extremo que alternan con su negativo, con sacudida. Al inicio del clip o en cada golpe | Duración (fotogramas), repetir en cada golpe, sacudida, umbral, BPM |
+| `PRO_FX_Din_Clones` | El clip repetido en mosaico (2×2, 3×3…), fijo o creciendo en cada golpe, con espejo opcional | Clones por lado, cambiar al ritmo, máximo, espejo, BPM |
+| `PRO_TR_Puertas` | A se parte por la mitad y cada lado sale hacia fuera mientras B se acerca detrás | Zoom del clip B |
+| `PRO_TR_Rebote` | A coge impulso y se encoge; B aparece de golpe con rebote | Fuerza del rebote, giro, color de fondo |
+| `PRO_TR_RevelaLiquido` | Manchas orgánicas crecen y descubren B, con borde de color | Suavidad, borde, color, tamaño de las manchas |
+| `PRO_TR_AntesDespues` | Antes y después: la línea se detiene a la mitad para comparar, con etiquetas. **Alarga la transición** (2-4 s) para que la pausa se note | Pausa, etiquetas y sus textos, color de la línea |
+| `PRO_TTL_Social_Comentario` | Burbuja de "responder al comentario" con avatar, que entra con pop | Cabecera, comentario, fuente, colores, ancho, rebote, formato vertical |
+| `PRO_TTL_Social_Ranking` | Número enorme (#1, #2…) en Anton para vídeos de top, con golpe de entrada y nombre debajo | Puesto, nombre, fuentes, colores, fuerza del golpe, formato vertical |
+
+**Consejo para velocity edits:** combina el **Retime** de Resolve (curva de velocidad del clip) con `PulsoRitmo` o `ImpactoFrames` en el golpe, y con `Din_Eco` o `Din_DesenfoqueMovimiento` en el tramo rápido.

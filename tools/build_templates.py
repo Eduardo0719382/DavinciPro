@@ -2713,6 +2713,259 @@ def gen_synthwave(name, anim):
     return macro(name, [], pubs, h, tools)
 
 
+# ======================================================================= LOTE 11: dinamicos para videos virales
+def beat_ucs(bpm=120):
+    """Controles de ritmo: BPM, FPS y desfase en fotogramas para alinear con el primer golpe."""
+    return [uc("BPM", "BPM de la música", bpm, 40, 220), uc("FPS", "Fotogramas por segundo", 30, 1, 120),
+            uc("Desfase", "Desfase (fotogramas hasta el primer golpe)", 0, 0, 120)], {"BPM": I(bpm), "FPS": I(30), "Desfase": I(0)}
+
+
+def beat(h):
+    """(fase 0..1 dentro del golpe, numero de golpe) a partir de BPM/FPS/Desfase."""
+    x = f"(max(0, time - {h}.Desfase)/({h}.FPS*60/{h}.BPM))"
+    return f"({x} - floor({x}))", f"floor({x})"
+
+
+def beat_pubs(h, bpm=120):
+    return [pub(h, "BPM", "BPM de la música", bpm), pub(h, "FPS", "Fotogramas por segundo", 30),
+            pub(h, "Desfase", "Desfase (fotogramas hasta el primer golpe)", 0)]
+
+
+@register("Effects", "PRO_FX_Din_PulsoRitmo")
+def din_pulso_ritmo(name, anim):
+    """Zoom, flash y sacudida en cada golpe de la musica (BPM). Ponlo en un Adjustment Clip sobre todo el edit."""
+    h = "Ritmo"
+    ph, _ = beat(h)
+    d = f"pow(1 - {ph}, {h}.Caida)"
+    ucs, inputs = beat_ucs()
+    ucs += [uc("Zoom", "Zoom por golpe", 0.08, 0, 0.5), uc("Flash", "Flash por golpe", 0, 0, 1),
+            uc("Temblor", "Sacudida por golpe", 0, 0, 3), uc("Caida", "Rapidez de la caída", 4, 1, 12)]
+    tools = [Tool("Pulso", "Transform", {"Size": I(1, f"1 + {h}.Zoom*{d}"),
+                                         "Center": I((0.5, 0.5), f"Point(0.5 + {h}.Temblor*0.01*{d}*sin(time*7.3), 0.5 + {h}.Temblor*0.01*{d}*sin(time*9.1 + 1))")},
+                  pos=(-110, 0)),
+             Tool(h, "BrightnessContrast", {"Input": I(link="Pulso"), "Gain": I(1, f"1 + {h}.Flash*{d}"), **inputs, "Zoom": I(0.08),
+                                            "Flash": I(0), "Temblor": I(0), "Caida": I(4)}, ucs, (0, 0))]
+    pubs = beat_pubs(h) + [pub(h, "Zoom", "Zoom por golpe", 0.08), pub(h, "Flash", "Flash por golpe", 0),
+                           pub(h, "Temblor", "Sacudida por golpe", 0), pub(h, "Caida", "Rapidez de la caída", 4)]
+    return macro(name, [("Pulso", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Din_Estrobo")
+def din_estrobo(name, anim):
+    """Estrobo al ritmo: en golpes alternos la imagen pasa a blanco y negro duro o a negativo."""
+    h = "Estrobo"
+    _, n = beat(h)
+    on = f"({n} - 2*floor({n}/2))"
+    ucs, inputs = beat_ucs()
+    ucs += [uc("Negativo", "Negativo (desmarcado = blanco y negro)", 0, 0, 1, checkbox=True), uc("Mezcla", "Intensidad", 1, 0, 1)]
+    tools = [Tool("Entrada", "PipeRouter", pos=(-330, 0)),
+             Tool("BN", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(0), "Contrast": I(0.45)}, pos=(-275, -66)),
+             solid("Blanco", (1, 1, 1), (-275, -132)),
+             merge("Inverso", "Blanco", "Entrada", (-220, -132), "Difference"),
+             merge("ConBN", "Entrada", "BN", (-165, 0), blend=0, blend_expr=f"{h}.Mezcla*{on}*(1 - {h}.Negativo)"),
+             merge("ConInverso", "ConBN", "Inverso", (-110, 0), blend=0, blend_expr=f"{h}.Mezcla*{on}*{h}.Negativo")]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConInverso"), **inputs, "Negativo": I(0), "Mezcla": I(1)}, ucs, (-55, 0)))
+    pubs = beat_pubs(h) + [pub(h, "Negativo", "Negativo (desmarcado = blanco y negro)", 0), pub(h, "Mezcla", "Intensidad", 1),
+                           pub("BN", "Contrast", "Contraste del blanco y negro", 0.45)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Din_ImpactoFrames")
+def din_impacto_frames(name, anim):
+    """Impact frames (estilo anime): unos fotogramas en blanco y negro extremo que alternan con su negativo, con sacudida.
+    Al inicio del clip o en cada golpe de la musica."""
+    h = "Impacto"
+    ph, _ = beat(h)
+    fpb = f"({h}.FPS*60/{h}.BPM)"
+    lt = f"iif({h}.AlRitmo > 0.5, {ph}*{fpb}, time)"
+    act = f"iif({lt} < {h}.Duracion, 1, 0)"
+    alt = f"(floor({lt}/2) - 2*floor({lt}/4))"
+    ucs, inputs = beat_ucs()
+    ucs = [uc("Duracion", "Duración (fotogramas)", 6, 1, 30), uc("AlRitmo", "Repetir en cada golpe (usa BPM)", 0, 0, 1, checkbox=True),
+           uc("Temblor", "Sacudida", 1, 0, 5), uc("Act", "Activo interno", 0, 0, 1, clamp=False)] + ucs
+    tools = [Tool("Entrada", "PipeRouter", pos=(-385, 0)),
+             Tool("Tinta", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(0), "Low": I(0.4), "High": I(0.6)}, pos=(-330, -66)),
+             solid("Blanco", (1, 1, 1), (-330, -132)),
+             merge("Negativo", "Tinta", "Blanco", (-275, -66), "Difference", blend=0, blend_expr=alt),
+             Tool("Golpe", "Transform", {"Input": I(link="Negativo"), "Size": I(1.06),
+                                         "Center": I((0.5, 0.5), f"Point(0.5 + {h}.Temblor*0.012*sin(time*11.3), 0.5 + {h}.Temblor*0.012*sin(time*13.7 + 1))")},
+                  pos=(-220, -66)),
+             merge("Mezcla", "Entrada", "Golpe", (-165, 0), blend=0, blend_expr=f"{h}.Act")]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Mezcla"), "Duracion": I(6), "AlRitmo": I(0), "Temblor": I(1),
+                                                "Act": I(0, act), **inputs}, ucs, (-110, 0)))
+    pubs = [pub(h, "Duracion", "Duración (fotogramas)", 6), pub(h, "AlRitmo", "Repetir en cada golpe (usa BPM)", 0),
+            pub(h, "Temblor", "Sacudida", 1), pub("Tinta", "Low", "Umbral de tinta", 0.4)] + beat_pubs(h)
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Din_Clones")
+def din_clones(name, anim):
+    """Rejilla de clones: el clip se repite en mosaico (2x2, 3x3...), fijo o cambiando en cada golpe. Con espejo opcional."""
+    h = "Clones"
+    _, n = beat(h)
+    grid = f"iif({h}.AlRitmo > 0.5, 1 + ({n} - {h}.Maximo*floor({n}/{h}.Maximo)), {h}.Cantidad)"
+    ucs, inputs = beat_ucs()
+    ucs = [uc("Cantidad", "Clones por lado", 2, 1, 6, integer=True), uc("AlRitmo", "Cambiar en cada golpe (usa BPM)", 0, 0, 1, checkbox=True),
+           uc("Maximo", "Máximo al ritmo", 3, 2, 6, integer=True), uc("Espejo", "Espejo", 0, 0, 1, checkbox=True)] + ucs
+    tools = [Tool(h, "Transform", {"Size": I(0.5, f"1/{grid}"), "Edges": I(1, f"iif({h}.Espejo > 0.5, 3, 1)"),
+                                   "Cantidad": I(2), "AlRitmo": I(0), "Maximo": I(3), "Espejo": I(0), **inputs}, ucs, (0, 0))]
+    pubs = [pub(h, "Cantidad", "Clones por lado", 2), pub(h, "AlRitmo", "Cambiar en cada golpe (usa BPM)", 0),
+            pub(h, "Maximo", "Máximo al ritmo", 3), pub(h, "Espejo", "Espejo", 0)] + beat_pubs(h)
+    return macro(name, [(h, "Input")], pubs, h, tools)
+
+
+@register("Transitions", "PRO_TR_Puertas")
+def tr_puertas(name, anim):
+    """Puertas: el clip A se parte por la mitad y cada lado sale hacia fuera, mientras B se acerca detras."""
+    h = "Puertas"
+    p = f"{h}.Progreso"
+    e = f"({p}*{p}*(3 - 2*{p}))"
+    tools = [Tool("EntradaA", "PipeRouter", pos=(-330, -66)),
+             Tool("Fondo", "Transform", {"Size": I(1.15, f"1 + {h}.Zoom*(1 - {e})")}, pos=(-330, 66))]
+    last = "Fondo"
+    for side, sx, mx in (("Izq", -1, 0.25), ("Der", 1, 0.75)):
+        tools += [Tool(f"Hoja{side}", "Transform", {"Input": I(link="EntradaA"), "Center": I((0.5, 0.5), f"Point(0.5 + {sx}*0.55*{e}, 0.5)")},
+                       pos=(-275, -66 if sx < 0 else 0)),
+                  rect(f"Masc{side}", (-220, -132 if sx < 0 else -99), Center=I((mx, 0.5), f"Point({mx} + {sx}*0.55*{e}, 0.5)"),
+                       Width=I(0.501), Height=I(8)),
+                  merge(f"Con{side}", last, f"Hoja{side}", (-220 + 55 * (sx > 0), 0),
+                        extra={"EffectMask": I(link=f"Masc{side}", out="Mask")})]
+        last = f"Con{side}"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Zoom", "Zoom del clip B", 0.15, 0, 1)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Progreso": I(link=anim, out="Value"), "Zoom": I(0.15)}, ucs, (-55, 0)))
+    pubs = [pub(h, "Zoom", "Zoom del clip B", 0.15)]
+    return macro(name, [("EntradaA", "Input"), ("Fondo", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_Rebote")
+def tr_rebote(name, anim):
+    """Pop: A coge impulso y se encoge hasta desaparecer; B aparece de golpe con rebote. Con giro opcional."""
+    h = "Rebote"
+    p = f"{h}.Progreso"
+    a, b = f"min(1, 2*{p})", f"max(0, 2*{p} - 1)"
+    c1 = f"(1.70158*{h}.Fuerza)"
+    in_back = f"(({c1} + 1)*{a}*{a}*{a} - {c1}*{a}*{a})"
+    out_back = f"(1 + ({c1} + 1)*({b} - 1)*({b} - 1)*({b} - 1) + {c1}*({b} - 1)*({b} - 1))"
+    tools = [Tool("PopA", "Transform", {"Size": I(1, f"max(0, 1 - {in_back})"), "Angle": I(0, f"{h}.Giro*{a}*{a}")}, pos=(-275, -66)),
+             Tool("PopB", "Transform", {"Size": I(0, f"max(0, {out_back})"), "Angle": I(0, f"-{h}.Giro*(1 - {b})*(1 - {b})")}, pos=(-275, 66)),
+             solid("Fondo", (0, 0, 0), (-220, -132)),
+             merge("ConA", "Fondo", "PopA", (-220, 0), blend=1, blend_expr=f"iif({p} < 0.5, 1, 0)"),
+             merge("ConB", "ConA", "PopB", (-165, 0), blend=0, blend_expr=f"iif({p} >= 0.5, 1, 0)")]
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Fuerza", "Fuerza del rebote", 1, 0, 3), uc("Giro", "Giro (grados)", 0, -360, 360)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConB"), "Progreso": I(link=anim, out="Value"), "Fuerza": I(1), "Giro": I(0)},
+                      ucs, (-110, 0)))
+    pubs = numbered([pub(h, "Fuerza", "Fuerza del rebote", 1), pub(h, "Giro", "Giro (grados)", 0),
+                     pub_color("Fondo", "Color de fondo", (0, 0, 0), "c1")])
+    return macro(name, [("PopA", "Input"), ("PopB", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_RevelaLiquido")
+def tr_revela_liquido(name, anim):
+    """Revelado liquido: manchas organicas de ruido crecen y descubren el clip B, con un borde de color opcional."""
+    h = "Liquido"
+    e = smooth(f"{h}.Progreso")
+    low = f"1 - 1.25*{e}"
+    tools = [Tool("EntradaA", "PipeRouter", pos=(-385, -66)), Tool("EntradaB", "PipeRouter", pos=(-385, 66)),
+             Tool("Manchas", "FastNoise", {**frame_format(), "Detail": I(6), "Contrast": I(1.6), "XScale": I(3), "SeetheRate": I(0.02)},
+                  pos=(-385, -198)),
+             Tool("Forma", "BrightnessContrast", {"Input": I(link="Manchas"), "Saturation": I(0), "Low": I(1, low),
+                                                  "High": I(1.04, f"{low} + {h}.Suavidad")}, pos=(-330, -198)),
+             Tool("FormaBorde", "BrightnessContrast", {"Input": I(link="Manchas"), "Saturation": I(0), "Low": I(1, f"{low} + 0.06"),
+                                                       "High": I(1.1, f"{low} + 0.06 + {h}.Suavidad")}, pos=(-330, -264)),
+             solid("Blanco", (1, 1, 1), (-275, -264)),
+             merge("FormaInv", "Blanco", "Forma", (-275, -198), "Difference"),
+             merge("ParteA", "EntradaA", "FormaInv", (-220, -66), "Multiply"),
+             merge("ParteB", "EntradaB", "Forma", (-220, 66), "Multiply"),
+             merge("Suma", "ParteA", "ParteB", (-165, 0), extra={"SubtractiveAdditive": I(0)}),
+             merge("Banda", "FormaBorde", "Forma", (-220, -264), "Difference"),
+             solid("ColorBorde", (1, 1, 1), (-165, -297)),
+             merge("BandaTenida", "Banda", "ColorBorde", (-165, -264), "Multiply"),
+             merge("ConBorde", "Suma", "BandaTenida", (-110, 0), "Screen", blend=0.6, blend_expr=f"{h}.Borde*sin({h}.Progreso*{PI})")]
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Suavidad", "Suavidad del borde", 0.04, 0.005, 0.3), uc("Borde", "Borde de color", 0.6, 0, 1)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConBorde"), "Progreso": I(link=anim, out="Value"), "Suavidad": I(0.04),
+                                                "Borde": I(0.6)}, ucs, (-55, 0)))
+    pubs = numbered([pub(h, "Suavidad", "Suavidad del borde", 0.04), pub(h, "Borde", "Borde de color", 0.6),
+                     pub_color("ColorBorde", "Color del borde", (1, 1, 1), "c1"),
+                     pub("Manchas", "XScale", "Tamaño de las manchas (más alto = más pequeñas)", 3)])
+    return macro(name, [("EntradaA", "Input"), ("EntradaB", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_AntesDespues")
+def tr_antes_despues(name, anim):
+    """Antes / despues: una linea recorre la imagen y descubre B, se detiene a la mitad para comparar y termina.
+    Alarga la transicion para que la pausa dure mas."""
+    h = "Comparar"
+    p = f"{h}.Progreso"
+    a = f"((1 - {h}.Pausa)/2)"
+    e = f"iif({p} < {a}, 0.5*{smooth(clamp01(f'{p}/{a}'))}, iif({p} < 1 - {a}, 0.5, 0.5 + 0.5*{smooth(clamp01(f'({p} - (1 - {a}))/{a}'))}))"
+    sh = dict(box=((0, 0, 0), 0.02, 0.015, 0.3))
+    tools = [Tool("EntradaA", "PipeRouter", pos=(-330, -66)), Tool("EntradaB", "PipeRouter", pos=(-330, 66)),
+             rect("MascB", (-275, -132), Center=I((0, 0.5), f"Point({h}.E/2, 0.5)"), Width=I(0, f"{h}.E"), Height=I(8)),
+             merge("ConB", "EntradaA", "EntradaB", (-275, 0), extra={"EffectMask": I(link="MascB", out="Mask")}),
+             rect("MascLinea", (-220, -132), Center=I((0, 0.5), f"Point({h}.E, 0.5)"), Width=I(0.005), Height=I(8)),
+             solid("Linea", (1, 1, 1), (-220, -99), mask="MascLinea"),
+             merge("ConLinea", "ConB", "Linea", (-220, 0), blend=1, blend_expr=f"iif({h}.E > 0.001, iif({h}.E < 0.999, 1, 0), 0)"),
+             styled("Antes", "ANTES", "Montserrat", "ExtraBold", 0.03, (-165, -132), center=(0.88, 0.9), **sh),
+             styled("Despues", "DESPUÉS", "Montserrat", "ExtraBold", 0.03, (-110, -132), center=(0.12, 0.9), **sh),
+             merge("ConAntes", "ConLinea", "Antes", (-165, 0), blend=1, blend_expr=f"{h}.Etiquetas*{clamp01(f'(0.85 - {h}.E)/0.1')}"),
+             merge("ConDespues", "ConAntes", "Despues", (-110, 0), blend=1, blend_expr=f"{h}.Etiquetas*{clamp01(f'({h}.E - 0.15)/0.1')}")]
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Pausa", "Pausa a la mitad (% de la transición)", 0.4, 0, 0.9),
+           uc("Etiquetas", "Etiquetas", 1, 0, 1), uc("E", "Posición interna", 0, 0, 1, clamp=False)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConDespues"), "Progreso": I(link=anim, out="Value"), "Pausa": I(0.4),
+                                                "Etiquetas": I(1), "E": I(0, e)}, ucs, (-55, 0)))
+    pubs = numbered([pub(h, "Pausa", "Pausa a la mitad (% de la transición)", 0.4), pub(h, "Etiquetas", "Etiquetas", 1),
+                     pub("Antes", "StyledText", "Etiqueta de antes"), pub("Despues", "StyledText", "Etiqueta de después"),
+                     pub_color("Linea", "Color de la línea", (1, 1, 1), "c1")])
+    return macro(name, [("EntradaA", "Input"), ("EntradaB", "Input")], pubs, h, tools, anim)
+
+
+@register("Titles", "PRO_TTL_Social_Comentario")
+def social_comentario(name, anim_):
+    """Burbuja de 'responder al comentario' (TikTok/Reels): caja blanca redondeada, avatar y comentario; entra con pop."""
+    h = "Comentario"
+    ucs, inputs = kit(h, 0.12, 0.08, [uc("Rebote", "Rebote", 1.2, 0, 3), uc("Ancho", "Ancho de la burbuja", 0.52, 0.2, 1)],
+                      {"Rebote": I(1.2), "Ancho": I(0.52)})
+    x0 = f"(0.5 - {h}.Ancho/2)"
+    body = [solid("Base", (0, 0, 0), (-440, -198), alpha=0),
+            rect("MascCaja", (-385, -231), Width=I(0.52, f"{h}.Ancho"), Height=I(0.1), CornerRadius=I(0.25)),
+            solid("Caja", (1, 1, 1), (-385, -198), mask="MascCaja"),
+            ellipse("MascAvatar", (-330, -231), Center=I((0.27, 0.5), f"Point({x0} + 0.04, 0.5)"), Width=I(0.045), Height=I(0.045)),
+            solid("Avatar", (0.95, 0.3, 0.45), (-330, -198), mask="MascAvatar"),
+            styled("Cabecera", "Responder al comentario de @usuario", "Poppins", "Regular", 0.016, (-275, -231), rgb=(0.45, 0.45, 0.45),
+                   center=(0.31, 0.522), left=True),
+            styled("Texto", "¿Cómo hiciste ese efecto?", "Poppins", "SemiBold", 0.026, (-220, -231), rgb=(0.08, 0.08, 0.08),
+                   center=(0.31, 0.478), left=True),
+            merge("B1", "Base", "Caja", (-385, -132)), merge("B2", "B1", "Avatar", (-330, -132)),
+            merge("B3", "B2", "Cabecera", (-275, -132)), merge("B4", "B3", "Texto", (-220, -132)),
+            mover("Pop", "B4", (-165, -132), size=f"max(0, {pop(h, 0, 1)})")]
+    for tn in ("Cabecera", "Texto"):
+        next(t for t in body if t.name == tn).inputs["Center"] = I((0.31, 0.5), f"Point({x0} + 0.075, {0.522 if tn == 'Cabecera' else 0.478})")
+    pubs = [pub("Cabecera", "StyledText", "Cabecera"), pub("Texto", "StyledText", "Comentario"),
+            pub("Texto", "Font", "Fuente", group="f1"), pub("Texto", "Style", group="f1"), pub("Texto", "Size", "Tamaño del comentario", 0.026),
+            pub_color("Caja", "Color de la burbuja", (1, 1, 1), "c1"), pub_color("Avatar", "Color del avatar", (0.95, 0.3, 0.45), "c2"),
+            pub(h, "Ancho", "Ancho de la burbuja", 0.52), pub(h, "Rebote", "Rebote", 1.2)]
+    return style_title(name, h, ucs, inputs, body, [("Pop", f"{h}.Xs*min(1, 3*{h}.U)")], pubs, dy_h=0.2, dy_v=0.12, size_v=1.3)
+
+
+@register("Titles", "PRO_TTL_Social_Ranking")
+def social_ranking(name, anim_):
+    """Videos de top / ranking: numero enorme en Anton con contorno, golpe de entrada y nombre del puesto debajo."""
+    h = "Ranking"
+    land = clamp01(f"{h}.U/0.5")
+    ucs, inputs = kit(h, 0.2, 0.08, [uc("Golpe", "Fuerza del golpe", 1.5, 0, 4)], {"Golpe": I(1.5)})
+    body = [styled("Numero", "#1", "Anton", "Regular", 0.22, (-385, -132), rgb=(1, 0.86, 0), outline=((0, 0, 0), 0.04),
+                   hard=((0, 0, 0), (0.012, -0.018))),
+            styled("Nombre", "EL MEJOR TRUCO", "Montserrat", "ExtraBold", 0.05, (-330, -132), outline=((0, 0, 0), 0.07),
+                   soft=((0, 0, 0), (0.004, -0.008), 4)),
+            mover("Anim1", "Numero", (-385, -66), cy="0.56", size=f"1 + {h}.Golpe*(1 - {land})*(1 - {land})", angle=f"-6*(1 - {land})"),
+            mover("Anim2", "Nombre", (-330, -66), cy=f"0.38 - 0.03*(1 - {phase(h, 0.5, 1)})")]
+    pubs = [pub("Numero", "StyledText", "Puesto"), pub("Nombre", "StyledText", "Nombre"),
+            *text_pubs("Numero", " del puesto", 0.22, (1, 0.86, 0), 1), *text_pubs("Nombre", " del nombre", 0.05, (1, 1, 1), 2),
+            pub(h, "Golpe", "Fuerza del golpe", 1.5)]
+    layers = [("Anim1", f"min(1, 4*{h}.U)*{h}.Xs"), ("Anim2", stage(h, 0.5, 1))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05, size_v=0.95)
+
+
 if __name__ == "__main__":
     for (cat, name), fn in BUILT.items():
         anim = "PRO" + name.split("_", 2)[-1].replace("_", "") + "Anim"

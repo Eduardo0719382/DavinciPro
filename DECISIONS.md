@@ -106,3 +106,10 @@
 - **Generadores elegidos:** los recursos más ofrecidos en los bancos de stock son las fugas de luz, las colas de película (countdown), las escenas synthwave y los degradados aurora o de malla. Se añadieron, junto con estática de TV y brasas, que son los fondos y overlays más comunes en intros y transiciones.
 - **Rejilla synthwave sin atan:** las expresiones de Fusion no tienen `atan`. Los ángulos y largos de las 15 líneas verticales se calculan en el script para 16:9 y 9:16, y una casilla elige entre los dos.
 - **Overlays sobre negro:** FugaLuz y Brasas salen sobre negro opaco en lugar de transparentes, para que el modo Screen o Add de la pista los combine sin depender del canal alfa.
+
+## D21. Lote 11: ritmo por BPM en lugar de marcadores
+- **Elegido:** los efectos al ritmo calculan el golpe con BPM, FPS y un desfase en fotogramas.
+- **Por qué:** las plantillas de la página Edit no leen el audio ni los marcadores de la timeline. Con BPM + desfase, un solo Adjustment Clip sigue toda una canción de tempo fijo.
+- **Límite:** las canciones con tempo variable desfasan con el tiempo. En ese caso, corta el Adjustment Clip y reajusta el desfase en cada tramo.
+- **Clones:** usa el modo de bordes de Transform. `Edges = 1` aparece en las plantillas oficiales; que 1 sea Wrap y 3 sea Mirror es una suposición (checklist 16.5).
+- **Fuentes de la investigación:** las guías de 2026 coinciden en editar al ritmo (cortes, zooms, flashes y sacudidas en los golpes), en los velocity edits y en el glitch. No hay datos fiables sobre impact frames ni antes/después; se incluyen porque son formatos muy comunes en shorts.

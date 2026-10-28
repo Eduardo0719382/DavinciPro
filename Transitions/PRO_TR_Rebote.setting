@@ -1,0 +1,123 @@
+{
+	Tools = ordered() {
+		PRO_TR_Rebote = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "PopA", Source = "Input", },
+				MainInput2 = InstanceInput { SourceOp = "PopB", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Rebote", Source = "Fuerza", Name = "Fuerza del rebote", Default = 1, },
+				Input2 = InstanceInput { SourceOp = "Rebote", Source = "Giro", Name = "Giro (grados)", Default = 0, },
+				Input3 = InstanceInput { SourceOp = "Fondo", Source = "TopLeftRed", Name = "Color de fondo", ControlGroup = 3, Default = 0, },
+				Input4 = InstanceInput { SourceOp = "Fondo", Source = "TopLeftGreen", ControlGroup = 3, Default = 0, },
+				Input5 = InstanceInput { SourceOp = "Fondo", Source = "TopLeftBlue", ControlGroup = 3, Default = 0, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Rebote", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				PopA = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Size = Input { Value = 1, Expression = "max(0, 1 - (((1.70158*Rebote.Fuerza) + 1)*min(1, 2*Rebote.Progreso)*min(1, 2*Rebote.Progreso)*min(1, 2*Rebote.Progreso) - (1.70158*Rebote.Fuerza)*min(1, 2*Rebote.Progreso)*min(1, 2*Rebote.Progreso)))", },
+						Angle = Input { Value = 0, Expression = "Rebote.Giro*min(1, 2*Rebote.Progreso)*min(1, 2*Rebote.Progreso)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -66 } },
+				},
+				PopB = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Size = Input { Value = 0, Expression = "max(0, (1 + ((1.70158*Rebote.Fuerza) + 1)*(max(0, 2*Rebote.Progreso - 1) - 1)*(max(0, 2*Rebote.Progreso - 1) - 1)*(max(0, 2*Rebote.Progreso - 1) - 1) + (1.70158*Rebote.Fuerza)*(max(0, 2*Rebote.Progreso - 1) - 1)*(max(0, 2*Rebote.Progreso - 1) - 1)))", },
+						Angle = Input { Value = 0, Expression = "-Rebote.Giro*(1 - max(0, 2*Rebote.Progreso - 1))*(1 - max(0, 2*Rebote.Progreso - 1))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 66 } },
+				},
+				Fondo = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0, },
+						TopLeftGreen = Input { Value = 0, },
+						TopLeftBlue = Input { Value = 0, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -132 } },
+				},
+				ConA = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Fondo", Source = "Output", },
+						Foreground = Input { SourceOp = "PopA", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "iif(Rebote.Progreso < 0.5, 1, 0)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 0 } },
+				},
+				ConB = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ConA", Source = "Output", },
+						Foreground = Input { SourceOp = "PopB", Source = "Output", },
+						Blend = Input { Value = 0, Expression = "iif(Rebote.Progreso >= 0.5, 1, 0)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+				Rebote = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "ConB", Source = "Output", },
+						Progreso = Input { SourceOp = "PROReboteAnim", Source = "Value", },
+						Fuerza = Input { Value = 1, },
+						Giro = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Fuerza = {
+							LINKS_Name = "Fuerza del rebote",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+						Giro = {
+							LINKS_Name = "Giro (grados)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = -360,
+							INP_MaxScale = 360,
+							INP_MinAllowed = -360,
+							INP_MaxAllowed = 360,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PROReboteAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_Rebote"
+}

@@ -1,0 +1,136 @@
+{
+	Tools = ordered() {
+		PRO_TR_Puertas = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "EntradaA", Source = "Input", },
+				MainInput2 = InstanceInput { SourceOp = "Fondo", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Puertas", Source = "Zoom", Name = "Zoom del clip B", Default = 0.15, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Puertas", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				EntradaA = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -330, -66 } },
+				},
+				Fondo = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Size = Input { Value = 1.15, Expression = "1 + Puertas.Zoom*(1 - (Puertas.Progreso*Puertas.Progreso*(3 - 2*Puertas.Progreso)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, 66 } },
+				},
+				HojaIzq = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "EntradaA", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + -1*0.55*(Puertas.Progreso*Puertas.Progreso*(3 - 2*Puertas.Progreso)), 0.5)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -66 } },
+				},
+				MascIzq = RectangleMask {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						OutputSize = Input { Value = FuID { "Custom" }, },
+						MaskWidth = Input { Value = 1920, },
+						MaskHeight = Input { Value = 1080, },
+						PixelAspect = Input { Value = { 1, 1 }, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Center = Input { Value = { 0.25, 0.5 }, Expression = "Point(0.25 + -1*0.55*(Puertas.Progreso*Puertas.Progreso*(3 - 2*Puertas.Progreso)), 0.5)", },
+						Width = Input { Value = 0.501, },
+						Height = Input { Value = 8, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -132 } },
+				},
+				ConIzq = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Fondo", Source = "Output", },
+						Foreground = Input { SourceOp = "HojaIzq", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+						EffectMask = Input { SourceOp = "MascIzq", Source = "Mask", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 0 } },
+				},
+				HojaDer = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "EntradaA", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + 1*0.55*(Puertas.Progreso*Puertas.Progreso*(3 - 2*Puertas.Progreso)), 0.5)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				MascDer = RectangleMask {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						OutputSize = Input { Value = FuID { "Custom" }, },
+						MaskWidth = Input { Value = 1920, },
+						MaskHeight = Input { Value = 1080, },
+						PixelAspect = Input { Value = { 1, 1 }, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Center = Input { Value = { 0.75, 0.5 }, Expression = "Point(0.75 + 1*0.55*(Puertas.Progreso*Puertas.Progreso*(3 - 2*Puertas.Progreso)), 0.5)", },
+						Width = Input { Value = 0.501, },
+						Height = Input { Value = 8, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -99 } },
+				},
+				ConDer = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ConIzq", Source = "Output", },
+						Foreground = Input { SourceOp = "HojaDer", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+						EffectMask = Input { SourceOp = "MascDer", Source = "Mask", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+				Puertas = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "ConDer", Source = "Output", },
+						Progreso = Input { SourceOp = "PROPuertasAnim", Source = "Value", },
+						Zoom = Input { Value = 0.15, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Zoom = {
+							LINKS_Name = "Zoom del clip B",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.15,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PROPuertasAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_Puertas"
+}

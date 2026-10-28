@@ -154,3 +154,16 @@ Antes de probar, instala las fuentes de [docs/fuentes.md](docs/fuentes.md) (o co
 - [ ] 15.5 `GEN_EstaticaTV`: el ruido cambia en cada fotograma y una banda clara recorre la imagen de arriba abajo.
 - [ ] 15.6 `GEN_CuentaRegresiva`: el número baja de 5 a 1, uno por segundo, y la línea da una vuelta cada segundo. *Si el número no cambia, falla el texto por expresión (como en 12.1).*
 - [ ] 15.7 `GEN_Synthwave`: las líneas verticales de la rejilla convergen en el horizonte, debajo del sol. Marca "Formato vertical" en una timeline 9:16 y comprueba que siguen convergiendo. *Si forman una X o se abren hacia arriba, el sentido del ángulo de las máscaras está al revés: avísame.*
+
+## 16. Lote 11: dinámicos para videos virales
+- [ ] 16.1 Aparecen 10 piezas nuevas (el registro debe mostrar 472 plantillas).
+- [ ] 16.2 `Din_PulsoRitmo` con BPM 120 y FPS 30: hay un golpe de zoom cada 15 fotogramas que cae enseguida. Con el desfase, el golpe se mueve.
+- [ ] 16.3 `Din_Estrobo`: un golpe en color, el siguiente en blanco y negro (o negativo si se marca).
+- [ ] 16.4 `Din_ImpactoFrames`: los 6 primeros fotogramas del clip son blanco y negro extremo, alternando con el negativo cada 2 fotogramas, y después vuelve al original.
+- [ ] 16.5 `Din_Clones` con 2: el clip aparece 4 veces (2×2). *Si sale pequeño en el centro con negro alrededor, el modo de bordes "Wrap" (Edges = 1) no se aplica: avísame. Si "Espejo" no cambia nada, el valor 3 no es Mirror.*
+- [ ] 16.6 `TR_Puertas`: A se abre por el centro sin huecos, y B está detrás.
+- [ ] 16.7 `TR_Rebote`: A se agranda un poco, se encoge hasta desaparecer y B aparece con rebote.
+- [ ] 16.8 `TR_RevelaLiquido`: B aparece por manchas que crecen. *Si sale saturado o blanco, falla el modo aditivo (como en 11.2).*
+- [ ] 16.9 `TR_AntesDespues` con 3 s de duración: la línea llega al centro, se detiene, luego termina. Las etiquetas ANTES y DESPUÉS tienen caja negra.
+- [ ] 16.10 `Social_Comentario`: la burbuja blanca entra con pop y el texto queda dentro. Si el comentario es largo, sube el "Ancho de la burbuja".
+- [ ] 16.11 `Social_Ranking`: "#1" cae de grande con contorno y sombra, y el nombre aparece debajo.
