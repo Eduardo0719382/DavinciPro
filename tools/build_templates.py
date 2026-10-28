@@ -5,6 +5,7 @@ Uso:  python tools/build_templates.py      (escribe en Effects/ y Transitions/)
 Las 4 piezas del piloto estan escritas a mano y este script no las toca.
 """
 import math
+import re
 from pathlib import Path
 
 from fusion_builder import (FuID, I, PI, Tool, clamp01, envelope_ucs, frame_format, macro,
@@ -1097,6 +1098,7 @@ def texto_pop(name, anim):
             pub("Texto", "Size", "Tamaño", 0.09), pub_color("Texto", "Color", (1, 1, 1), 5, prefix="", suffix="1"),
             pub("Posicion", "Center", "Posición"), pub(h, "Rebote", "Rebote", 1.2),
             pub(h, "Entrada", "Duración entrada (% del clip)", 0.15), pub(h, "Salida", "Duración salida (% del clip)", 0.1)]
+    pubs += vertical_text(tools, h, ("Texto",), factor=2.2, pubs=pubs)
     return macro(name, [], pubs, "Posicion", tools, anim)
 
 
@@ -1152,8 +1154,14 @@ def compose(layers, base="Lienzo", x0=0):
     return tools, last
 
 
-def title(name, h, ucs, inputs, body, layers, pubs, x_end=440):
-    """Lienzo transparente + cuerpo + capas + transform final que aloja los controles (Posicion/Escala)."""
+def title(name, h, ucs, inputs, body, layers, pubs, x_end=440, vertical=True, **fmt):
+    """Lienzo transparente + cuerpo + capas + transform final que aloja los controles (Posicion/Escala).
+    Con vertical=True usa style_title (casilla 'Formato vertical'); fmt: dy_v, size_v, dx_v."""
+    if vertical:
+        for pp in pubs:
+            if isinstance(pp, dict) and isinstance(pp["default"], str):
+                pp["default"] = float(pp["default"])
+        return style_title(name, h, ucs, inputs, body, layers, pubs, **fmt)
     tools = [solid("Lienzo", (0, 0, 0), (-440, 0), alpha=0)] + body
     t, last = compose(layers, x0=110)
     tools += t
@@ -1184,7 +1192,7 @@ def barra_progreso(name, anim):
     pubs = [pub_color("Pista", "Color de la pista", (1, 1, 1), 1), pub("Pista", "TopLeftAlpha", "Opacidad de la pista", 0.25),
             pub_color("Relleno", "Color del relleno", (1, 0.25, 0.25), 5), pub(h, "Ancho", "Ancho total", 0.8),
             pub(h, "Alto", "Grosor", 0.012), pub(h, "PosY", "Altura en pantalla", 0.06), pub(h, "Redondeo", "Redondeo", 0.5)]
-    return title(name, h, ucs, inputs, body, [("Pista", f"{h}.Xs*{stage(h, 0, 1)}"), ("Relleno", f"{h}.Xs")], pubs)
+    return title(name, h, ucs, inputs, body, [("Pista", f"{h}.Xs*{stage(h, 0, 1)}"), ("Relleno", f"{h}.Xs")], pubs, dy_v=-0.3)
 
 
 @register("Titles", "PRO_TTL_Contador")
@@ -1205,7 +1213,7 @@ def contador(name, anim):
             pub("Numero", "Font", "Fuente del número", group=4), pub("Numero", "Style", group=4),
             pub_color("Numero", "Color del número", (1, 1, 1), 6, prefix="", suffix="1"),
             pub("Etiqueta", "StyledText", "Etiqueta"), pub_color("Etiqueta", "Color de la etiqueta", (0.85, 0.85, 0.85), 10, prefix="", suffix="1")]
-    return title(name, h, ucs, inputs, body, [("Numero", stage(h, 0, 0.6)), ("Etiqueta", stage(h, 0.4, 1))], pubs)
+    return title(name, h, ucs, inputs, body, [("Numero", stage(h, 0, 0.6)), ("Etiqueta", stage(h, 0.4, 1))], pubs, size_v=2.0)
 
 
 @register("Titles", "PRO_TTL_Callout_Flecha")
@@ -1237,7 +1245,7 @@ def callout(name, anim):
     for ch in ("Red", "Green", "Blue"):
         next(t for t in body if t.name == "Etiqueta").inputs[f"{ch}1"] = I(1, f"Punto.TopLeft{ch}")
     layers = [("Punto", stage(h, 0, 0.3)), ("Aro", stage(h, 0.1, 0.4)), ("Linea", f"{h}.Xs"), ("Etiqueta", stage(h, 0.6, 1))]
-    return title(name, h, ucs, inputs, body, layers, pubs)
+    return title(name, h, ucs, inputs, body, layers, pubs, vertical=False)
 
 
 @register("Titles", "PRO_TTL_EndScreen")
@@ -1283,7 +1291,7 @@ def suscribete(name, anim):
                                       "Size": I(1, f"max(0, {h}.E*{h}.Xs*(1 - 0.12*{pulse}))")}, pos=(-165, -66))]
     pubs = [pub("Texto", "StyledText", "Texto"), pub_color("Boton", "Color del botón", (0.9, 0.1, 0.1), 2),
             pub_color("Texto", "Color del texto", (1, 1, 1), 5, prefix="", suffix="1"), pub(h, "Rebote", "Rebote", 1.5)]
-    return title(name, h, ucs, inputs, body, [("Pop", None)], pubs)
+    return title(name, h, ucs, inputs, body, [("Pop", None)], pubs, size_v=2.2, dy_v=-0.05)
 
 
 @register("Titles", "PRO_TTL_Cita")
@@ -1305,7 +1313,7 @@ def cita(name, anim):
             pub("Frase", "Size", "Tamaño de la frase", 0.05),
             pub_color("Comillas", "Color de acento", (0.95, 0.75, 0.3), 6, prefix="", suffix="1")]
     layers = [("Comillas", stage(h, 0, 0.4)), ("Frase", stage(h, 0.15, 0.6)), ("Raya", f"{h}.Xs"), ("Autor", stage(h, 0.6, 1))]
-    return title(name, h, ucs, inputs, body, layers, pubs)
+    return title(name, h, ucs, inputs, body, layers, pubs, size_v=1.6)
 
 
 @register("Titles", "PRO_TTL_Titulo_Apertura")
@@ -1326,7 +1334,7 @@ def titulo_apertura(name, anim):
             pub("Principal", "Font", "Fuente", group=3), pub("Principal", "Style", group=3), pub("Principal", "Size", "Tamaño", 0.075),
             pub_color("Principal", "Color", (1, 1, 1), 6, prefix="", suffix="1"), pub(h, "Tracking", "Separación inicial de letras", 0.4)]
     layers = [("Principal", s_main), ("LineaSup", f"{h}.Xs"), ("LineaInf", f"{h}.Xs"), ("Sub", stage(h, 0.5, 1))]
-    return title(name, h, ucs, inputs, body, layers, pubs)
+    return title(name, h, ucs, inputs, body, layers, pubs, size_v=1.2)
 
 
 @register("Titles", "PRO_TTL_Separador")
@@ -1346,7 +1354,7 @@ def separador(name, anim):
     pubs = [pub("Texto", "StyledText", "Texto (vacío = solo línea)"), pub(h, "Largo", "Largo", 0.4),
             pub_color("Linea", "Color de la línea", (1, 1, 1), 3), pub_color("Texto", "Color del texto", (1, 1, 1), 6, prefix="", suffix="1")]
     layers = [("Linea", f"{h}.Xs"), ("Puntos", stage(h, 0, 0.3)), ("Texto", stage(h, 0.5, 1))]
-    return title(name, h, ucs, inputs, body, layers, pubs)
+    return title(name, h, ucs, inputs, body, layers, pubs, size_v=1.6)
 
 
 @register("Titles", "PRO_TTL_LineaTiempo")
@@ -1579,7 +1587,7 @@ def texto_maquina(name, anim):
                       extra={"StyledText": I("", f"Text(string.sub({src}, 1, {n}) .. {cursor})")})]
     pubs = numbered([pub("Fuente", "StyledText", "Texto"), *text_pubs("Texto", "", 0.06, (1, 1, 1), 1),
                      pub("Texto", "Center", "Inicio del texto"), pub(h, "Cursor", "Cursor parpadeante", 1)])
-    return title(name, h, ucs, inputs, body, [("Texto", f"{h}.Xs")], pubs)
+    return title(name, h, ucs, inputs, body, [("Texto", f"{h}.Xs")], pubs, size_v=1.3, dx_v=0.05)
 
 
 @register("Titles", "PRO_TTL_Texto_Resaltado")
@@ -1599,7 +1607,7 @@ def texto_resaltado(name, anim):
     pubs = numbered([pub("Texto", "StyledText", "Texto"), *text_pubs("Texto", " del texto", 0.07, (0.05, 0.05, 0.05), 1),
                      pub_color("Banda", "Color del resaltado", (1, 0.85, 0.1), "c2"), pub(h, "Ancho", "Ancho del resaltado", 0.42),
                      pub(h, "Alto", "Alto del resaltado", 0.075), pub(h, "Inclinacion", "Inclinación (grados)", -2)])
-    return title(name, h, ucs, inputs, body, [("Banda", f"{h}.Xs"), ("Texto", stage(h, 0, 0.35))], pubs)
+    return title(name, h, ucs, inputs, body, [("Banda", f"{h}.Xs"), ("Texto", stage(h, 0, 0.35))], pubs, size_v=1.6)
 
 
 @register("Titles", "PRO_TTL_Texto_Brillo")
@@ -1619,7 +1627,7 @@ def texto_brillo(name, anim):
     pubs = numbered([pub("Texto", "StyledText", "Texto"), *text_pubs("Texto", "", 0.12, (0.95, 0.75, 0.3), 1),
                      pub(h, "Periodo", "Fotogramas entre destellos", 60), pub(h, "Intensidad", "Intensidad del destello", 1.2),
                      pub(h, "AnchoBrillo", "Ancho del destello", 0.06)])
-    return title(name, h, ucs, inputs, body, [("Destello", stage(h, 0, 1))], pubs)
+    return title(name, h, ucs, inputs, body, [("Destello", stage(h, 0, 1))], pubs, size_v=2.2)
 
 
 @register("Titles", "PRO_TTL_Texto_Neon")
@@ -1640,7 +1648,7 @@ def texto_neon(name, anim):
                      pub(h, "Parpadeo", "Fallos de parpadeo", 0.3)])
     layers = [("HaloLejos", f"{h}.Glow*0.8*{h}.F*{h}.Xs"), ("HaloCerca", f"{h}.Glow*{h}.F*{h}.Xs"),
               ("Nucleo", f"(0.35 + 0.65*{h}.F)*{h}.Xs")]
-    return title(name, h, ucs, inputs, body, layers, pubs)
+    return title(name, h, ucs, inputs, body, layers, pubs, size_v=2.5)
 
 
 # ----------------------------------------------------------------------- transiciones
@@ -1788,6 +1796,7 @@ def cam_rec(name, anim):
                      pub(h, "Margen", "Margen de las esquinas", 0.05), pub(h, "Largo", "Largo de las esquinas", 0.06),
                      pub(h, "Grosor", "Grosor de las líneas", 0.004),
                      pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778)])
+    vertical_text(tools, h, ("TextoREC", "Codigo", "Info"), checkbox=False)
     return macro(name, [("Entrada", "Input")], pubs, h, tools)
 
 
@@ -1834,6 +1843,7 @@ def cam_seguridad(name, anim):
                      pub(h, "Ruido", "Ruido", 0.2), pub(h, "Lineas", "Líneas", 0.3), pub(h, "NumLineas", "Número de líneas", 240),
                      pub("VinVineta", "Blend", "Viñeta", 0.45), pub("Textos", "Blend", "Opacidad del texto", 0.9),
                      pub_color("Camara", "Color del texto", (1, 1, 1), "c2", prefix="", suffix="1")])
+    pubs += vertical_text(tools, h, ("Camara", "Fecha", "Reloj"))
     return macro(name, [("Entrada", "Input")], pubs, h, tools)
 
 
@@ -2104,17 +2114,131 @@ def pop(h, a, b):
     return ease_back(clamp01(f"({h}.U - {a:g})/{b - a:g}"), h)
 
 
-def style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.0, dy_v=0.0, size_v=1.0, mains=()):
+# En Fusion, el tamano de Text+ y el alto de RectangleMask son fracciones del ALTO del cuadro, y el ancho y las X
+# son fracciones del ANCHO. Un titulo disenado en 16:9 se veria en 9:16 con el texto 3.16 veces mas grande que sus
+# formas. vertical_map() lo evita: en vertical multiplica por K = (9/16)/(16/9) = 0.3164 los tamanos de texto, los altos
+# de rectangulo y la distancia vertical al centro, de modo que el bloque queda identico al de 16:9 escalado al ancho.
+# Las entradas que ya dependen de 'Vertical' (iconos, comentario) o que estan publicadas no se tocan.
+K_VERT = 0.3164
+
+
+def _point_args(expr):
+    inner = expr.strip()[len("Point("):-1]
+    depth = 0
+    for i, ch in enumerate(inner):
+        depth += ch == "("
+        depth -= ch == ")"
+        if ch == "," and depth == 0:
+            return inner[:i].strip(), inner[i + 1:].strip()
+    raise ValueError(expr)
+
+
+def _parts(spec):
+    """(valor, expresion) de una cadena Input { ... } generada por I()."""
+    m = re.search(r'Expression = "((?:[^"\\]|\\.)*)"', spec)
+    expr = m.group(1).replace('\\"', '"') if m else None
+    m2 = re.search(r"Value = \{ ([-\d.e]+), ([-\d.e]+) \}", spec)
+    if m2:
+        return (float(m2.group(1)), float(m2.group(2))), expr
+    m3 = re.search(r"Value = ([-\d.e]+)", spec)
+    return (float(m3.group(1)) if m3 else None), expr
+
+
+def vertical_map(h, body, ucs, inputs, pubs):
+    k = f"iif({h}.Vertical > 0.5, {K_VERT}, 1)"
+    published = {(pp["tool"], pp["source"]) for pp in pubs}
+
+    def skip(t, key):
+        spec = t.inputs.get(key)
+        return spec is None or "SourceOp" in spec or "Vertical" in spec or (t.name, key) in published
+
+    def map_point(t, key):
+        if skip(t, key):
+            return
+        val, expr = _parts(t.inputs[key])
+        if expr:
+            if not expr.startswith("Point("):
+                return
+            x, y = _point_args(expr)
+        else:
+            if val[1] == 0.5:
+                return
+            x, y = f"{val[0]:g}", f"{val[1]:g}"
+        t.inputs[key] = I(val, f"Point({x}, 0.5 + (({y}) - 0.5)*{k})")
+
+    def map_scalar(t, key):
+        if skip(t, key):
+            return
+        val, expr = _parts(t.inputs[key])
+        t.inputs[key] = I(val, f"({expr if expr else f'{val:g}'})*{k}")
+
+    for t in body:
+        if t.kind in ("Transform", "TextPlus", "RectangleMask", "EllipseMask"):
+            map_point(t, "Center")
+        if t.kind == "TriangleMask":
+            for i in (1, 2, 3):
+                map_point(t, f"Point{i}")
+        if t.kind == "RectangleMask":
+            map_scalar(t, "Height")
+        spec = t.inputs.get("Size", "")
+        if t.kind == "TextPlus" and spec and "SourceOp" not in spec and "Vertical" not in spec:
+            # el tamano pasa a un control del titulo (para poder editarlo) multiplicado por K
+            val, _ = _parts(t.inputs["Size"])
+            cname = f"Tam{t.name}"
+            ucs.insert(-2, uc(cname, f"Tamaño {t.name}", val, 0, 1, clamp=False))
+            inputs[cname] = I(val)
+            t.inputs["Size"] = I(val, f"{h}.{cname}*{k}")
+    for pp in pubs:
+        if pp["source"] == "Size" and any(t.name == pp["tool"] and t.kind == "TextPlus" for t in body):
+            pp["tool"], pp["source"] = h, f"Tam{pp['tool']}"
+
+
+def vertical_text(tools, h, names, factor=1.6, checkbox=True, extra=(), pubs=()):
+    """El texto de Text+ se mide sobre el alto del cuadro: en vertical saldria 3.16 veces mas grande (respecto al ancho)
+    que en 16:9. Multiplica el tamano por K*factor cuando el formato es vertical. Con checkbox=True agrega la casilla
+    'Formato vertical (9:16)' al host; si no, usa h.Aspecto < 1. extra: [(tool, input)] numericos a escalar igual."""
+    cond = f"{h}.Vertical > 0.5" if checkbox else f"{h}.Aspecto < 1"
+    k = f"iif({cond}, {K_VERT * factor:.4f}, 1)"
+    host = next(x for x in tools if x.name == h)
+    for t in tools:
+        if t.name in names:
+            val, _ = _parts(t.inputs["Size"])
+            flat = [x for pp in pubs for x in (pp if isinstance(pp, list) else [pp])]
+            sized = [pp for pp in flat if pp["tool"] == t.name and pp["source"] == "Size"]
+            if sized:
+                # tamano publicado: pasa a un control del host para que siga siendo editable
+                host.ucs.insert(0, uc(f"Tam{t.name}", "Tamaño", val, 0, 1, clamp=False))
+                host.inputs[f"Tam{t.name}"] = I(val)
+                t.inputs["Size"] = I(val, f"{h}.Tam{t.name}*{k}")
+                for pp in sized:
+                    pp["tool"], pp["source"] = h, f"Tam{t.name}"
+            else:
+                t.inputs["Size"] = I(val, f"{val:g}*{k}")
+    for tn, key in extra:
+        t = next(x for x in tools if x.name == tn)
+        val, expr = _parts(t.inputs[key])
+        t.inputs[key] = I(val, f"({expr if expr else f'{val:g}'})*{k}")
+    if checkbox:
+        host.ucs.insert(0, uc("Vertical", "Formato vertical (9:16)", 0, 0, 1, checkbox=True))
+        host.inputs["Vertical"] = I(0)
+        return [pub(h, "Vertical", "Formato vertical (9:16)", 0)]
+    return []
+
+
+def style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.0, dy_v=0.0, size_v=1.0, mains=(), dx_v=0.0):
     """Como title(), con un Transform 'Formato' que recoloca y escala el bloque si se marca 'Formato vertical (9:16)'.
+    En vertical el bloque se ve igual que en 16:9 (vertical_map) y 'Formato' lo escala (size_v) y lo mueve (dx_v, dy_v).
     mains: entradas de video si la pieza es un efecto (p. ej. la foto del comentario)."""
     v = f"{h}.Vertical"
     ucs = ucs[:-2] + [uc("Vertical", "Formato vertical (9:16)", 0, 0, 1, checkbox=True)] + ucs[-2:]
     inputs = {**inputs, "Vertical": I(0)}
+    pubs = numbered(pubs)
+    vertical_map(h, body, ucs, inputs, pubs)
     tools = [solid("Lienzo", (0, 0, 0), (-440, 0), alpha=0)] + body
     t, last = compose(layers, x0=110)
     tools += t
     tools.append(Tool("Formato", "Transform", {"Input": I(link=last),
-                                               "Center": I((0.5, 0.5 + dy_h), f"Point(0.5, 0.5 + iif({v} > 0.5, {dy_v:g}, {dy_h:g}))"),
+                                               "Center": I((0.5, 0.5 + dy_h), f"Point(0.5 + iif({v} > 0.5, {dx_v:g}, 0), 0.5 + iif({v} > 0.5, {dy_v:g}, {dy_h:g}))"),
                                                "Size": I(1, f"iif({v} > 0.5, {size_v:g}, 1)")}, pos=(385, 0)))
     tools.append(Tool(h, "Transform", {"Input": I(link="Formato"), **inputs}, ucs, (440, 0)))
     entrada = float(inputs["Entrada"].split("Value = ")[1].split(",")[0])
@@ -2149,7 +2273,7 @@ def estilo_viral(name, anim_):
     # la palabra clave copia el contorno de la linea 1
     body[1].inputs.update({ch: I(0, f"Linea1.{ch}") for ch in ("Red2", "Green2", "Blue2", "Thickness2")})
     layers = [("Anim1", stage(h, 0, 0.25)), ("Anim2", stage(h, 0.35, 0.6))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=-0.28, dy_v=-0.14, size_v=1.1)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=-0.28, dy_v=-0.14, size_v=1.7)
 
 
 @register("Titles", "PRO_TTL_Estilo_Gancho")
@@ -2173,7 +2297,7 @@ def estilo_gancho(name, anim_):
             pub("Titular", "Offset4", "Desplazamiento de la sombra"), *text_pubs("Apoyo", " del apoyo", 0.035, (1, 1, 1), 2),
             pub(h, "Golpe", "Fuerza del golpe", 2), pub(h, "Temblor", "Temblor al aterrizar", 1), pub(h, "Inclinacion", "Inclinación (grados)", -4)]
     layers = [("Anim1", f"min(1, 4*{h}.U)*{h}.Xs"), ("Anim2", stage(h, 0.6, 1))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.05, dy_v=0.12, size_v=0.9)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.05, dy_v=0.12, size_v=1.5)
 
 
 @register("Titles", "PRO_TTL_Estilo_Trailer")
@@ -2192,7 +2316,7 @@ def estilo_trailer(name, anim_):
             *text_pubs("Titulo", " del título", 0.13, (1, 1, 1), 1), *text_pubs("Sub", " del subtítulo", 0.025, (0.8, 0.8, 0.8), 2),
             pub(h, "Expansion", "Separación de letras durante el clip", 0.15)]
     layers = [("Anim1", stage(h, 0, 1)), ("Anim2", stage(h, 0.5, 1))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=0.8)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=1.4)
 
 
 @register("Titles", "PRO_TTL_Estilo_Elegante")
@@ -2218,7 +2342,7 @@ def estilo_elegante(name, anim_):
             *text_pubs("Nombres", " de los nombres", 0.1, cream, 1), pub("Fecha", "Font", "Fuente de la fecha", group="f2"),
             pub("Fecha", "Style", group="f2"), pub("Fecha", "Size", "Tamaño de la fecha", 0.025)]
     layers = [("Anim1", stage(h, 0, 0.7)), ("Linea", f"{h}.Xs"), ("Anim2", stage(h, 0.4, 1))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05, size_v=0.95)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05, size_v=1.8)
 
 
 @register("Titles", "PRO_TTL_Estilo_Minimal")
@@ -2234,7 +2358,7 @@ def estilo_minimal(name, anim_):
     pubs = [pub("Titulo", "StyledText", "Título"), pub("Sub", "StyledText", "Subtítulo"),
             *text_pubs("Titulo", " del título", 0.065, (1, 1, 1), 1), *text_pubs("Sub", " del subtítulo", 0.03, (0.85, 0.85, 0.85), 2)]
     layers = [("Anim1", stage(h, 0, 0.7)), ("Anim2", stage(h, 0.3, 1))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=0.85)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.0)
 
 
 @register("Titles", "PRO_TTL_Estilo_Documental")
@@ -2255,7 +2379,7 @@ def estilo_documental(name, anim_):
             *text_pubs("Dato", " del dato", 0.026, (0.1, 0.1, 0.1), 2),
             pub_color("Dato", "Color de la caja del dato", (0.95, 0.95, 0.95), "b2", prefix="", suffix="6")]
     layers = [("Anim1", stage(h, 0, 0.6)), ("Anim2", stage(h, 0.35, 1))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.15)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dx_v=0.484, dy_v=0.03, size_v=2.2)
 
 
 @register("Titles", "PRO_TTL_Estilo_Deportivo")
@@ -2265,24 +2389,25 @@ def estilo_deportivo(name, anim_):
     e1, e2, eb = phase(h, 0.2, 0.7), phase(h, 0.45, 1), phase(h, 0, 0.5)
     ucs, inputs = kit(h, 0.2, 0.1)
     accent = (0.9, 0.1, 0.15)
-    body = [rect("MascBarra", (-440, -165), Center=I((0.3, 0.2), f"Point(0.06 + 0.25*{eb}, 0.205)"), Width=I(0.5, f"0.5*{eb}"),
-                 Height=I(0.15, f"0.085*{icon_asp(h)}"), Angle=I(6)),
+    # barra detras del nombre; el dato va debajo de la barra, en blanco, para que no se pierda sobre el color
+    body = [rect("MascBarra", (-440, -165), Center=I((0.28, 0.2), f"Point(0.055 + 0.225*{eb}, 0.2)"), Width=I(0.45, f"0.45*{eb}"),
+                 Height=I(0.105), Angle=I(2)),
             solid("Barra", accent, (-440, -132), mask="MascBarra"),
-            styled("Nombre", "APELLIDO", "Teko", "SemiBold", 0.11, (-385, -132), center=(0.08, 0.2), left=True,
-                   hard=((0, 0, 0), (0.006, -0.01))),
-            styled("Dato", "DELANTERO · 25 GOLES", "Teko", "Regular", 0.045, (-330, -132), rgb=accent, center=(0.08, 0.125), left=True),
+            styled("Nombre", "APELLIDO", "Teko", "SemiBold", 0.11, (-385, -132), center=(0.08, 0.197), left=True,
+                   hard=((0, 0, 0), (0.004, -0.006))),
+            styled("Dato", "DELANTERO · 25 GOLES", "Teko", "Medium", 0.045, (-330, -132), rgb=(1, 1, 1), center=(0.08, 0.115), left=True,
+                   hard=((0, 0, 0), (0.003, -0.004))),
             Tool("Rafaga1", "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0), "XBlurSize": I(0, f"40*(1 - {e1})"), "YBlurSize": I(0),
                                      "Input": I(link="Nombre")}, pos=(-385, -99)),
             Tool("Rafaga2", "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0), "XBlurSize": I(0, f"40*(1 - {e2})"), "YBlurSize": I(0),
                                      "Input": I(link="Dato")}, pos=(-330, -99)),
             mover("Anim1", "Rafaga1", (-385, -66), cx=f"0.5 - 0.6*(1 - {e1})"),
             mover("Anim2", "Rafaga2", (-330, -66), cx=f"0.5 - 0.6*(1 - {e2})")]
-    body[3].inputs.update({f"{ch}1": I(1, f"Barra.TopLeft{ch}") for ch in ("Red", "Green", "Blue")})
     pubs = [pub("Nombre", "StyledText", "Nombre"), pub("Dato", "StyledText", "Dato"),
             *text_pubs("Nombre", " del nombre", 0.11, (1, 1, 1), 1), pub_color("Barra", "Color del equipo", accent, "c2"),
-            pub("Dato", "Font", "Fuente del dato", group="f3"), pub("Dato", "Style", group="f3"), pub("Dato", "Size", "Tamaño del dato", 0.045)]
+            *text_pubs("Dato", " del dato", 0.045, (1, 1, 1), 3)]
     layers = [("Barra", f"{h}.Xs"), ("Anim1", stage(h, 0.2, 0.5)), ("Anim2", stage(h, 0.45, 0.8))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.15)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dx_v=0.23, dy_v=-0.05, size_v=1.6)
 
 
 @register("Titles", "PRO_TTL_Estilo_Retro80")
@@ -2302,7 +2427,7 @@ def estilo_retro80(name, anim_):
             pub("Titulo", "Offset4", "Desplazamiento de la sombra"), pub(h, "Glow", "Brillo del halo", 0.8),
             pub_color("Sub", "Color del subtítulo", (0, 0.9, 1), "c2", prefix="", suffix="1")]
     layers = [("Halo", f"{h}.Glow*{h}.F*{h}.Xs"), ("Anim1", f"(0.3 + 0.7*{h}.F)*{h}.Xs"), ("Anim2", stage(h, 0.5, 1))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=0.8)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=1.4)
 
 
 @register("Titles", "PRO_TTL_Estilo_Gamer")
@@ -2318,7 +2443,7 @@ def estilo_gamer(name, anim_):
     pubs = [pub("Titulo", "StyledText", "Título"), pub("Sub", "StyledText", "Texto que parpadea"),
             *text_pubs("Titulo", " del título", 0.06, (0.3, 1, 0.35), 1), *text_pubs("Sub", " del parpadeo", 0.025, (1, 1, 1), 2)]
     layers = [("Anim1", f"{h}.Xs*iif({h}.U > 0, 1, 0)"), ("Anim2", f"{h}.Xs*iif({h}.U >= 1, 1, 0)*iif(sin(time*0.3) > 0, 1, 0)")]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=1.2)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.2)
 
 
 @register("Titles", "PRO_TTL_Estilo_Nota")
@@ -2337,7 +2462,7 @@ def estilo_nota(name, anim_):
             pub_color("Raya", "Color del subrayado", (1, 0.85, 0.1), "c2"), pub(h, "Ancho", "Ancho del subrayado", 0.36),
             pub(h, "Vaiven", "Vaivén", 1)]
     layers = [("Raya", f"{h}.Xs"), ("Anim1", stage(h, 0, 0.5))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05, size_v=2.0)
 
 
 # ----------------------------------------------------------------------- efectos para horizontal y vertical
@@ -2466,6 +2591,7 @@ def look_digicam(name, anim):
     pubs = numbered([pub("Fecha", "StyledText", "Fecha"), pub_color("Fecha", "Color de la fecha", (1, 0.55, 0.1), "c1", prefix="", suffix="1"),
                      pub("Fecha", "Center", "Posición de la fecha"), pub(h, "Blend", "Opacidad de la fecha", 1),
                      pub("Look", "Saturation", "Saturación", 1.25), pub("BlBloom", "Blend", "Brillo", 0.35), pub("GrGrano", "Blend", "Ruido", 0.06)])
+    pubs += vertical_text(tools, h, ("Fecha",))
     return macro(name, [("Entrada", "Input")], pubs, h, tools)
 
 
@@ -2619,6 +2745,7 @@ def gen_cuenta_regresiva(name, anim):
                      pub_color("Fondo", "Color de fondo", (0.55, 0.55, 0.52), "c1"), pub_color("Lineas", "Color de líneas y número", (0.1, 0.1, 0.1), "c2"),
                      pub("Numero", "Font", "Fuente del número", group="f1"), pub("Numero", "Style", group="f1"),
                      pub(h, "Grano", "Grano", 0.15), pub(h, "Parpadeo", "Parpadeo", 1), pub("VinVineta", "Blend", "Viñeta", 0.5)])
+    pubs += vertical_text(tools, h, ("Numero",), factor=1, extra=[("MascBarrido", "Height")])
     return macro(name, [], pubs, h, tools)
 
 
@@ -2915,6 +3042,7 @@ def tr_antes_despues(name, anim):
     pubs = numbered([pub(h, "Pausa", "Pausa a la mitad (% de la transición)", 0.4), pub(h, "Etiquetas", "Etiquetas", 1),
                      pub("Antes", "StyledText", "Etiqueta de antes"), pub("Despues", "StyledText", "Etiqueta de después"),
                      pub_color("Linea", "Color de la línea", (1, 1, 1), "c1")])
+    pubs += vertical_text(tools, h, ("Antes", "Despues"))
     return macro(name, [("EntradaA", "Input"), ("EntradaB", "Input")], pubs, h, tools, anim)
 
 
@@ -2981,7 +3109,7 @@ def comentario(name, foto):
     else:
         pubs.append(pub_color("Avatar", "Color del avatar", (0.95, 0.3, 0.45), "c2"))
     pubs += [pub(h, "Ancho", "Ancho de la burbuja", 0.52), pub(h, "Rebote", "Rebote", 1.2)]
-    return style_title(name, h, ucs, inputs, body, [("Pop", f"{h}.Xs*min(1, 3*{h}.U)")], pubs, dy_h=0.2, dy_v=0.12, size_v=1.3,
+    return style_title(name, h, ucs, inputs, body, [("Pop", f"{h}.Xs*min(1, 3*{h}.U)")], pubs, dy_h=0.2, dy_v=0.12, size_v=1.6,
                        mains=[("Entrada", "Input")] if foto else ())
 
 
@@ -3132,7 +3260,7 @@ def social_ranking(name, anim_):
             *text_pubs("Numero", " del puesto", 0.22, (1, 0.86, 0), 1), *text_pubs("Nombre", " del nombre", 0.05, (1, 1, 1), 2),
             pub(h, "Golpe", "Fuerza del golpe", 1.5)]
     layers = [("Anim1", f"min(1, 4*{h}.U)*{h}.Xs"), ("Anim2", stage(h, 0.5, 1))]
-    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05, size_v=0.95)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05, size_v=2.0)
 
 
 
@@ -3212,7 +3340,7 @@ def icono_like(name, anim_):
     layers = [(chispas, f"{h}.Xs*{burst}*(1 - {burst})*4"), ("Pop", f"{h}.Xs*min(1, 3*{h}.U)"), ("Etiqueta", stage(h, 0.5, 1))]
     pubs = [pub_color("Rombo", "Color del corazón", red, "c1"), pub("Etiqueta", "StyledText", "Texto"),
             pub(h, "Rebote", "Rebote", 1.5), pub(h, "Latido", "Latido", 1)]
-    return style_title(name, h, ucs, inputs, body, layers, pubs)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.5)
 
 
 @register("Titles", "PRO_TTL_Icono_Play")
@@ -3231,7 +3359,7 @@ def icono_play(name, anim_):
     layers = [("Pop", f"{h}.Xs*min(1, 3*{h}.U)"), ("Etiqueta", stage(h, 0.45, 1))]
     pubs = [pub_color("Boton", "Color del botón", (1, 0.05, 0.05), "c1"), pub_color("Triangulo", "Color del triángulo", (1, 1, 1), "c2"),
             pub("Etiqueta", "StyledText", "Texto"), pub(h, "Rebote", "Rebote", 1.4)]
-    return style_title(name, h, ucs, inputs, body, layers, pubs)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.5)
 
 
 @register("Titles", "PRO_TTL_Icono_Checklist")
@@ -3267,7 +3395,7 @@ def icono_checklist(name, anim_):
     pubs = [pub(f"Texto{i}", "StyledText", f"Punto {i + 1}") for i in range(3)]
     pubs += [pub("Texto0", "Font", "Fuente", group="f1"), pub("Texto0", "Style", group="f1"),
              pub_color("Circulo0", "Color del check", green, "c1"), pub(h, "Rebote", "Rebote", 1.6)]
-    return style_title(name, h, ucs, inputs, body, layers, pubs)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dx_v=0.1, size_v=2.0)
 
 
 @register("Titles", "PRO_TTL_Icono_Ubicacion")
@@ -3295,7 +3423,7 @@ def icono_ubicacion(name, anim_):
     layers = [("Sombra", f"{h}.Xs*min(1, 2*{h}.U)"), ("Caida", f"{h}.Xs*min(1, 4*{h}.U)"), ("Lugar", stage(h, 0.6, 1))]
     pubs = [pub("Lugar", "StyledText", "Lugar"), pub("Lugar", "Font", "Fuente", group="f1"), pub("Lugar", "Style", group="f1"),
             pub_color("Cabeza", "Color del pin", red, "c1"), pub(h, "Rebote", "Rebote", 1.4)]
-    return style_title(name, h, ucs, inputs, body, layers, pubs)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.5)
 
 
 @register("Titles", "PRO_TTL_Icono_Flecha")
@@ -3321,7 +3449,7 @@ def icono_flecha(name, anim_):
     layers = [("Mover", f"{h}.Xs*min(1, 3*{h}.U)")]
     pubs = [pub(h, "Angulo", "Ángulo (0 = hacia abajo)", 0), pub_color("Asta", "Color", yellow, "c1"),
             pub(h, "Recorrido", "Recorrido del rebote", 0.02), pub(h, "Rebote", "Rebote", 1.4)]
-    return style_title(name, h, ucs, inputs, body, layers, pubs)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.5)
 
 
 @register("Titles", "PRO_TTL_Icono_Estrellas")
@@ -3345,7 +3473,7 @@ def icono_estrellas(name, anim_):
     layers.append(("Etiqueta", stage(h, 0.7, 1)))
     pubs = [pub(h, "Valoracion", "Estrellas encendidas", 5), pub_color("Oro", "Color de las estrellas", gold, "c1"),
             pub("Etiqueta", "StyledText", "Texto"), pub(h, "Rebote", "Rebote", 1.6)]
-    return style_title(name, h, ucs, inputs, body, layers, pubs)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.0)
 
 
 @register("Titles", "PRO_TTL_Icono_Redes")
@@ -3375,7 +3503,7 @@ def icono_redes(name, anim_):
     pubs = [pub("Usuario", "StyledText", "Usuario"), pub("Arroba", "StyledText", "Símbolo"),
             pub_color("Insignia", "Color del círculo", (0.95, 0.25, 0.55), "c1"), pub_color("Pastilla", "Color de la pastilla", (0.1, 0.1, 0.12), "c2"),
             pub(h, "Ancho", "Ancho de la pastilla", 0.36), pub(h, "Rebote", "Rebote", 1.4)]
-    return style_title(name, h, ucs, inputs, body, layers, pubs)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.2)
 
 
 @register("Titles", "PRO_TTL_Icono_Cursor")
@@ -3402,7 +3530,7 @@ def icono_cursor(name, anim_):
     layers = [("Onda", f"{h}.Xs*{click}*(1 - {click})*4*iif({h}.U >= 0.7, 1, 0)"), ("Movimiento", f"{h}.Xs*min(1, 4*{h}.U)")]
     pubs = [pub_color("Flecha", "Color del cursor", (1, 1, 1), "c1"), pub_color("Onda", "Color de la onda", (1, 1, 1), "c2"),
             pub(h, "DesdeX", "Viene desde X", 0.18), pub(h, "DesdeY", "Viene desde Y", -0.12)]
-    return style_title(name, h, ucs, inputs, body, layers, pubs)
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=2.5)
 
 if __name__ == "__main__":
     for (cat, name), fn in BUILT.items():

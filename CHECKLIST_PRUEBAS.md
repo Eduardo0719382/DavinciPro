@@ -192,3 +192,12 @@ Antes de probar, instala las fuentes de [docs/fuentes.md](docs/fuentes.md) (o co
 - [ ] 19.3 `Social_Tarjeta`, `Retro_CRT` y `TR_Barras` cubren el alto correcto sin necesitar el control de aspecto (ya no existe en ellas).
 - [ ] 19.4 `Social_ZonaSegura` en 9:16: la banda inferior ocupa el 22 % del alto. `Social_Reencuadre`: el clip 16:9 en 9:16 se ve entero, sin recortar arriba ni abajo.
 - [ ] 19.5 `TR_Corte`: las dos mitades se separan justo por la línea blanca.
+
+## 20. Revisión horizontal / vertical (D25)
+Prueba cada título en una timeline 1920×1080 y en otra 1080×1920. En la vertical, marca **Formato vertical (9:16)**.
+- [ ] 20.1 En vertical, el título se ve igual que en horizontal (mismas proporciones entre texto, cajas e iconos) y no se sale por los lados.
+- [ ] 20.2 `Estilo_Deportivo`: el nombre queda dentro de la barra y el dato se lee debajo, en blanco.
+- [ ] 20.3 `Estilo_Documental` y `Estilo_Deportivo` en vertical quedan a la izquierda, por encima de la zona inferior de `Social_ZonaSegura`.
+- [ ] 20.4 `Barra_Progreso` en vertical queda abajo del todo; `Suscribete`, por encima de la zona inferior.
+- [ ] 20.5 `Cam_REC` (con Aspecto 0.5625), `Cam_Seguridad`, `Look_Digicam`, `GEN_CuentaRegresiva`, `TR_AntesDespues` y `Social_TextoPop` en vertical: el texto tiene un tamaño razonable y no tapa el centro.
+- [ ] 20.6 Cambiar "Tamaño" en el Inspector de cualquier estilo sigue funcionando en los dos formatos.

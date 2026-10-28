@@ -153,8 +153,8 @@
 					CtrlWShown = false,
 					Inputs = {
 						Input = Input { SourceOp = "M1", Source = "Output", },
-						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5, 0.5 + iif(Flecha.Vertical > 0.5, 0, 0))", },
-						Size = Input { Value = 1, Expression = "iif(Flecha.Vertical > 0.5, 1, 1)", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + iif(Flecha.Vertical > 0.5, 0, 0), 0.5 + iif(Flecha.Vertical > 0.5, 0, 0))", },
+						Size = Input { Value = 1, Expression = "iif(Flecha.Vertical > 0.5, 2.5, 1)", },
 					},
 					ViewInfo = OperatorInfo { Pos = { 385, 0 } },
 				},

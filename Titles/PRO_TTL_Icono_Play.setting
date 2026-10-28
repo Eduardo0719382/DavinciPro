@@ -124,7 +124,7 @@
 						StyledText = Input { Value = "MIRA EL VIDEO COMPLETO", },
 						Font = Input { Value = "Montserrat", },
 						Style = Input { Value = "ExtraBold", },
-						Size = Input { Value = 0.03, },
+						Size = Input { Value = 0.03, Expression = "Play.TamEtiqueta*iif(Play.Vertical > 0.5, 0.3164, 1)", },
 						Red1 = Input { Value = 1, },
 						Green1 = Input { Value = 1, },
 						Blue1 = Input { Value = 1, },
@@ -167,7 +167,7 @@
 					CtrlWShown = false,
 					Inputs = {
 						Input = Input { SourceOp = "Icono2", Source = "Output", },
-						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5, 0.5)", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5, 0.5 + ((0.5) - 0.5)*iif(Play.Vertical > 0.5, 0.3164, 1))", },
 						Size = Input { Value = 1, Expression = "max(0, (1 + ((1.70158*Play.Rebote) + 1)*(max(0, min(1, (Play.U - 0)/0.6)) - 1)*(max(0, min(1, (Play.U - 0)/0.6)) - 1)*(max(0, min(1, (Play.U - 0)/0.6)) - 1) + (1.70158*Play.Rebote)*(max(0, min(1, (Play.U - 0)/0.6)) - 1)*(max(0, min(1, (Play.U - 0)/0.6)) - 1)))*(1 + 0.03*sin(time*0.2)*iif(Play.U >= 1, 1, 0))", },
 					},
 					ViewInfo = OperatorInfo { Pos = { -220, -132 } },
@@ -196,8 +196,8 @@
 					CtrlWShown = false,
 					Inputs = {
 						Input = Input { SourceOp = "M2", Source = "Output", },
-						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5, 0.5 + iif(Play.Vertical > 0.5, 0, 0))", },
-						Size = Input { Value = 1, Expression = "iif(Play.Vertical > 0.5, 1, 1)", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + iif(Play.Vertical > 0.5, 0, 0), 0.5 + iif(Play.Vertical > 0.5, 0, 0))", },
+						Size = Input { Value = 1, Expression = "iif(Play.Vertical > 0.5, 2.5, 1)", },
 					},
 					ViewInfo = OperatorInfo { Pos = { 385, 0 } },
 				},
@@ -212,6 +212,7 @@
 						Xs = Input { Value = 1, Expression = "(max(0, min(1, (1 - Play.Progreso)/max(Play.Salida, 0.0001))))*(max(0, min(1, (1 - Play.Progreso)/max(Play.Salida, 0.0001))))*(3-2*(max(0, min(1, (1 - Play.Progreso)/max(Play.Salida, 0.0001)))))", },
 						Rebote = Input { Value = 1.4, },
 						Vertical = Input { Value = 0, },
+						TamEtiqueta = Input { Value = 0.03, },
 					},
 					ViewInfo = OperatorInfo { Pos = { 440, 0 } },
 					UserControls = ordered() {
@@ -270,6 +271,15 @@
 							INP_MaxScale = 1,
 							INP_MinAllowed = 0,
 							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						TamEtiqueta = {
+							LINKS_Name = "Tamaño Etiqueta",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.03,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
 							ICS_ControlPage = "Controls",
 						},
 						U = {

@@ -27,6 +27,6 @@ Si cambias la fuente en el Inspector, revisa también el **Tamaño**: cada fuent
 
 ## Horizontal (16:9) y vertical (9:16)
 
-- Los estilos de texto tienen la casilla **Formato vertical (9:16)**. Recoloca el bloque en la zona que no tapan los botones de TikTok, Reels o Shorts y ajusta la escala.
+- **Todos los títulos** (estilos, iconos, comentario, gráficos animados) tienen la casilla **Formato vertical (9:16)**. Márcala en timelines verticales. El título se ve igual que en 16:9, a un tamaño adecuado para el ancho, y queda fuera de las zonas que tapan los botones de TikTok, Reels o Shorts. Sin marcarla, en vertical el texto sale unas 3 veces más grande que sus formas.
 - Usa `PRO_FX_Social_ZonaSegura` en un clip de ajuste mientras editas, para ver qué zonas tapa la interfaz de cada red. **Quítalo antes de exportar.**
 - Para usar un clip horizontal en una timeline vertical sin barras negras, aplica `PRO_FX_Social_Reencuadre`: rellena el fondo con el mismo clip ampliado y desenfocado. También sirve al revés.

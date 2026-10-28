@@ -222,7 +222,7 @@
 						StyledText = Input { Value = "Ciudad de México", },
 						Font = Input { Value = "Poppins", },
 						Style = Input { Value = "SemiBold", },
-						Size = Input { Value = 0.032, },
+						Size = Input { Value = 0.032, Expression = "Ubicacion.TamLugar*iif(Ubicacion.Vertical > 0.5, 0.3164, 1)", },
 						Red1 = Input { Value = 0.08, },
 						Green1 = Input { Value = 0.08, },
 						Blue1 = Input { Value = 0.08, },
@@ -272,8 +272,8 @@
 					CtrlWShown = false,
 					Inputs = {
 						Input = Input { SourceOp = "M3", Source = "Output", },
-						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5, 0.5 + iif(Ubicacion.Vertical > 0.5, 0, 0))", },
-						Size = Input { Value = 1, Expression = "iif(Ubicacion.Vertical > 0.5, 1, 1)", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + iif(Ubicacion.Vertical > 0.5, 0, 0), 0.5 + iif(Ubicacion.Vertical > 0.5, 0, 0))", },
+						Size = Input { Value = 1, Expression = "iif(Ubicacion.Vertical > 0.5, 2.5, 1)", },
 					},
 					ViewInfo = OperatorInfo { Pos = { 385, 0 } },
 				},
@@ -288,6 +288,7 @@
 						Xs = Input { Value = 1, Expression = "(max(0, min(1, (1 - Ubicacion.Progreso)/max(Ubicacion.Salida, 0.0001))))*(max(0, min(1, (1 - Ubicacion.Progreso)/max(Ubicacion.Salida, 0.0001))))*(3-2*(max(0, min(1, (1 - Ubicacion.Progreso)/max(Ubicacion.Salida, 0.0001)))))", },
 						Rebote = Input { Value = 1.4, },
 						Vertical = Input { Value = 0, },
+						TamLugar = Input { Value = 0.032, },
 					},
 					ViewInfo = OperatorInfo { Pos = { 440, 0 } },
 					UserControls = ordered() {
@@ -346,6 +347,15 @@
 							INP_MaxScale = 1,
 							INP_MinAllowed = 0,
 							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						TamLugar = {
+							LINKS_Name = "Tamaño Lugar",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.032,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
 							ICS_ControlPage = "Controls",
 						},
 						U = {
