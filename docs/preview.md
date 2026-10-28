@@ -351,3 +351,40 @@ Resolve las cargó (422 plantillas); su aspecto está **sin revisar visualmente*
 | `PRO_FX_Glow_Neon` | Brillo intenso de luces de neón, con un halo cercano y otro amplio | Umbral, brillo cercano, halo amplio, radios, saturación |
 | `PRO_FX_Polvo_Flotante` | Partículas de polvo en el aire, en dos capas de profundidad (rayos de luz, interiores) | Cantidad, brillo, velocidad, desenfoque |
 | `PRO_FX_Social_Tarjeta` | El clip como tarjeta con esquinas redondeadas y sombra sobre un fondo de color (reels) | Tamaño, redondeo, color de fondo, sombra, aspecto |
+
+---
+
+# Lote 8: texto social, transiciones, cámaras y clima
+
+## Títulos de texto (Titles › PRO Pack)
+
+| Pieza | Para qué | Controles principales |
+|---|---|---|
+| `PRO_TTL_Texto_Maquina` | La frase aparece letra a letra, con cursor parpadeante (estilo máquina de escribir) | Texto, fuente (Courier New por defecto), tamaño, color, inicio del texto, cursor. **La duración de la entrada es lo que tarda en escribirse** (60 % del clip por defecto) |
+| `PRO_TTL_Texto_Resaltado` | Palabra con un resaltador que se dibuja detrás de izquierda a derecha (subtítulos tipo CapCut) | Texto, fuente, colores del texto y del resaltado, ancho, alto, inclinación. *Ajusta el ancho al de tu texto a mano* |
+| `PRO_TTL_Texto_Brillo` | Destello diagonal que recorre el texto cada cierto tiempo (logos, títulos "premium") | Texto, fuente, color, fotogramas entre destellos, intensidad y ancho del destello |
+| `PRO_TTL_Texto_Neon` | Letrero de neón que se enciende parpadeando y falla de vez en cuando | Texto, fuente, color, brillo y radio del halo, fallos de parpadeo |
+
+## Transiciones (Video Transitions › PRO Pack)
+
+| Pieza | Para qué | Controles |
+|---|---|---|
+| `PRO_TR_ZoomRadial` | A se lanza hacia la cámara con desenfoque radial y B llega desde ella | Zoom, desenfoque radial |
+| `PRO_TR_Giro` | La imagen gira y cambia de clip en mitad del giro | Giro en grados (negativo = al otro lado), zoom para tapar esquinas, desenfoque |
+| `PRO_TR_Barras` | 8 barras verticales entran escalonadas, alternando arriba y abajo, y descubren el clip B | Escalonado, alternar, aspecto del timeline |
+| `PRO_TR_Iris` | Círculo que crece desde un punto, con aro de color | Origen X/Y, grosor y color del aro, suavidad, tamaño final |
+
+## Efectos (Effects › PRO Pack)
+
+| Pieza | Para qué | Controles |
+|---|---|---|
+| `PRO_FX_Cam_REC` | Interfaz de videocámara: REC parpadeante, código de tiempo que corre, batería y esquinas | Color, opacidad, texto inferior, FPS, código inicial, batería, margen/largo/grosor de esquinas, aspecto |
+| `PRO_FX_Cam_Seguridad` | Cámara de seguridad: casi sin color, tinte verdoso, ruido, líneas, nombre, fecha y reloj | Nombre, fecha, hora inicial, FPS, color, tinte, ruido, líneas, viñeta, color del texto |
+| `PRO_FX_Cam_VisionNocturna` | Visión nocturna verde con brillo, grano y visor circular | Amplificación, color, brillo, grano, visor (tamaño y suavidad) |
+| `PRO_FX_Cam_Termica` | Cámara térmica: frío (azul) → medio (magenta) → caliente (amarillo) | Tres colores, contraste, suavidad, mezcla |
+| `PRO_FX_Retro_CRT` | Televisor de tubo: separación de color, líneas, parpadeo y pantalla redondeada | Separación, brillo, líneas, número de líneas, parpadeo, marco, redondeo, viñeta, aspecto |
+| `PRO_FX_Social_PantallaDividida` | Pantalla dividida: pon cada clip en su pista con este efecto y elige su celda | Columnas, filas, columna y fila del clip, separación, redondeo, zoom, encuadre X/Y, aspecto |
+| `PRO_FX_Din_KenBurns` | Zoom y paneo lentos para fotos y planos fijos; se adapta a la duración del clip | Zoom inicial/final, desplazamiento X/Y inicial/final, suavizado |
+| `PRO_FX_Luz_Rayos` | Rayos de luz que salen de las luces altas desde un punto (ventanas, sol entre árboles) | Origen X/Y, largo, intensidad, umbral, color, refuerzo |
+| `PRO_FX_Clima_Lluvia` | Lluvia en dos capas, inclinada por el viento, con la escena algo más oscura | Cantidad, brillo, velocidad, viento, oscurecer |
+| `PRO_FX_Clima_Nieve` | Nieve en tres capas de profundidad con vaivén | Cantidad, brillo, velocidad, viento, desenfoque de copos cercanos |

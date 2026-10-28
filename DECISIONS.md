@@ -84,3 +84,11 @@
 - **Contador:** el texto se genera con una expresión `Text(string.format(...))` en StyledText. Riesgo: checklist 12.1.
 - **Mezclas de dos colores** (duotono, degradado): A·(1−x) + B·x mediante el modo aditivo del Merge, el mismo riesgo que el halftone.
 - **Bokeh:** 14 luces con su propio fondo y máscara, sin máscaras encadenadas, para que funcione aunque el encadenado falle. Las posiciones son pseudoaleatorias con semilla fija, así que salen igual cada vez.
+
+## D18. Lote 8: solo herramientas que ya usa el paquete
+- **Elegido:** 18 piezas (4 títulos de texto, 4 transiciones, 10 efectos) construidas únicamente con las herramientas de los lotes anteriores: Transform, Blur, BrightnessContrast, Merge, Background, FastNoise, máscaras y Text+.
+- **Desenfoque radial sin herramienta propia:** `ZoomRadial` y `Luz_Rayos` promedian varias copias escaladas (cada Merge con mezcla 1/(k+1)). Para escalar desde un punto O sin usar Pivot, el centro de cada copia es 0.5 + (O − 0.5)·(1 − escala).
+- **Máquina de escribir:** un Text+ oculto guarda la frase y el visible la recorta con `string.sub`. Riesgos: leer `StyledText.Value` de otro nodo y que Lua cuente bytes (una tilde puede verse mal durante un fotograma).
+- **Pantalla dividida:** un efecto por clip con su celda, en lugar de una plantilla de varias entradas: en la página Edit un efecto solo recibe el clip al que se aplica.
+- **Grupos de controles:** el nuevo `numbered()` calcula `ControlGroup` a partir de nombres simbólicos, para no contar a mano la posición de cada selector de color.
+- **Descartado:** caleidoscopio y espejo (el modo de bordes de Transform no se puede confirmar), eco o estela (las herramientas de tiempo no se pueden confirmar), pixelado (Resolve ya trae Mosaic), audio-reactivo (las plantillas de Edit no reciben audio), ruta de mapa y gráficos de datos (para un lote propio).

@@ -1,0 +1,282 @@
+{
+	Tools = ordered() {
+		PRO_FX_Luz_Rayos = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Rayos", Source = "OX", Name = "Origen X", Default = 0.7, },
+				Input2 = InstanceInput { SourceOp = "Rayos", Source = "OY", Name = "Origen Y", Default = 0.85, },
+				Input3 = InstanceInput { SourceOp = "Rayos", Source = "Largo", Name = "Largo de los rayos", Default = 0.6, },
+				Input4 = InstanceInput { SourceOp = "Rayos", Source = "Blend", Name = "Intensidad", Default = 0.6, },
+				Input5 = InstanceInput { SourceOp = "Altas", Source = "Low", Name = "Umbral de luces", Default = 0.7, },
+				Input6 = InstanceInput { SourceOp = "Tinte", Source = "TopLeftRed", Name = "Color de la luz", ControlGroup = 6, Default = 1, },
+				Input7 = InstanceInput { SourceOp = "Tinte", Source = "TopLeftGreen", ControlGroup = 6, Default = 0.9, },
+				Input8 = InstanceInput { SourceOp = "Tinte", Source = "TopLeftBlue", ControlGroup = 6, Default = 0.7, },
+				Input9 = InstanceInput { SourceOp = "Refuerzo", Source = "Gain", Name = "Refuerzo", Default = 3, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Rayos", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -550, 0 } },
+				},
+				Altas = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Low = Input { Value = 0.7, },
+						High = Input { Value = 1, },
+						Saturation = Input { Value = 0.6, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -495, -66 } },
+				},
+				Rayo1 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Rayos.Largo*0.125", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (Rayos.OX - 0.5)*(1 - (1 + Rayos.Largo*0.125)), 0.5 + (Rayos.OY - 0.5)*(1 - (1 + Rayos.Largo*0.125)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -462, -66 } },
+				},
+				RayoMedia1 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Altas", Source = "Output", },
+						Foreground = Input { SourceOp = "Rayo1", Source = "Output", },
+						Blend = Input { Value = 0.5, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -462, 0 } },
+				},
+				Rayo2 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Rayos.Largo*0.25", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (Rayos.OX - 0.5)*(1 - (1 + Rayos.Largo*0.25)), 0.5 + (Rayos.OY - 0.5)*(1 - (1 + Rayos.Largo*0.25)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -429, -66 } },
+				},
+				RayoMedia2 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RayoMedia1", Source = "Output", },
+						Foreground = Input { SourceOp = "Rayo2", Source = "Output", },
+						Blend = Input { Value = 0.333333, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -429, 0 } },
+				},
+				Rayo3 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Rayos.Largo*0.375", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (Rayos.OX - 0.5)*(1 - (1 + Rayos.Largo*0.375)), 0.5 + (Rayos.OY - 0.5)*(1 - (1 + Rayos.Largo*0.375)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -396, -66 } },
+				},
+				RayoMedia3 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RayoMedia2", Source = "Output", },
+						Foreground = Input { SourceOp = "Rayo3", Source = "Output", },
+						Blend = Input { Value = 0.25, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -396, 0 } },
+				},
+				Rayo4 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Rayos.Largo*0.5", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (Rayos.OX - 0.5)*(1 - (1 + Rayos.Largo*0.5)), 0.5 + (Rayos.OY - 0.5)*(1 - (1 + Rayos.Largo*0.5)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -363, -66 } },
+				},
+				RayoMedia4 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RayoMedia3", Source = "Output", },
+						Foreground = Input { SourceOp = "Rayo4", Source = "Output", },
+						Blend = Input { Value = 0.2, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -363, 0 } },
+				},
+				Rayo5 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Rayos.Largo*0.625", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (Rayos.OX - 0.5)*(1 - (1 + Rayos.Largo*0.625)), 0.5 + (Rayos.OY - 0.5)*(1 - (1 + Rayos.Largo*0.625)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -66 } },
+				},
+				RayoMedia5 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RayoMedia4", Source = "Output", },
+						Foreground = Input { SourceOp = "Rayo5", Source = "Output", },
+						Blend = Input { Value = 0.166667, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, 0 } },
+				},
+				Rayo6 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Rayos.Largo*0.75", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (Rayos.OX - 0.5)*(1 - (1 + Rayos.Largo*0.75)), 0.5 + (Rayos.OY - 0.5)*(1 - (1 + Rayos.Largo*0.75)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -297, -66 } },
+				},
+				RayoMedia6 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RayoMedia5", Source = "Output", },
+						Foreground = Input { SourceOp = "Rayo6", Source = "Output", },
+						Blend = Input { Value = 0.142857, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -297, 0 } },
+				},
+				Rayo7 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Rayos.Largo*0.875", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (Rayos.OX - 0.5)*(1 - (1 + Rayos.Largo*0.875)), 0.5 + (Rayos.OY - 0.5)*(1 - (1 + Rayos.Largo*0.875)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -264, -66 } },
+				},
+				RayoMedia7 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RayoMedia6", Source = "Output", },
+						Foreground = Input { SourceOp = "Rayo7", Source = "Output", },
+						Blend = Input { Value = 0.125, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -264, 0 } },
+				},
+				Rayo8 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Altas", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Rayos.Largo*1", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (Rayos.OX - 0.5)*(1 - (1 + Rayos.Largo*1)), 0.5 + (Rayos.OY - 0.5)*(1 - (1 + Rayos.Largo*1)))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -231, -66 } },
+				},
+				RayoMedia8 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RayoMedia7", Source = "Output", },
+						Foreground = Input { SourceOp = "Rayo8", Source = "Output", },
+						Blend = Input { Value = 0.111111, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -231, 0 } },
+				},
+				Suaviza = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 3, },
+						Input = Input { SourceOp = "RayoMedia8", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -66 } },
+				},
+				Tinte = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 0.9, },
+						TopLeftBlue = Input { Value = 0.7, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -99 } },
+				},
+				Tenido = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Suaviza", Source = "Output", },
+						Foreground = Input { SourceOp = "Tinte", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -66 } },
+				},
+				Refuerzo = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Tenido", Source = "Output", },
+						Gain = Input { Value = 3, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, -66 } },
+				},
+				Rayos = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "Refuerzo", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.6, },
+						PerformDepthMerge = Input { Value = 0, },
+						OX = Input { Value = 0.7, },
+						OY = Input { Value = 0.85, },
+						Largo = Input { Value = 0.6, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+					UserControls = ordered() {
+						OX = {
+							LINKS_Name = "Origen X",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.7,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						OY = {
+							LINKS_Name = "Origen Y",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.85,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Largo = {
+							LINKS_Name = "Largo de los rayos",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.6,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Luz_Rayos"
+}

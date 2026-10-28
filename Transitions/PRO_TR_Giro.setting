@@ -1,0 +1,119 @@
+{
+	Tools = ordered() {
+		PRO_TR_Giro = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "GiroSaliente", Source = "Input", },
+				MainInput2 = InstanceInput { SourceOp = "GiroEntrante", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Mezcla", Source = "Angulo", Name = "Giro (grados, negativo = al otro lado)", Default = 180, },
+				Input2 = InstanceInput { SourceOp = "Mezcla", Source = "Zoom", Name = "Zoom para tapar esquinas", Default = 1, },
+				Input3 = InstanceInput { SourceOp = "Mezcla", Source = "Desenfoque", Name = "Desenfoque", Default = 25, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Mezcla", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				GiroSaliente = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Angle = Input { Value = 0, Expression = "Mezcla.Angulo*min(1, 2*Mezcla.Progreso)*min(1, 2*Mezcla.Progreso)", },
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Zoom*sin(Mezcla.Progreso*3.14159265)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -33 } },
+				},
+				GiroEntrante = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Angle = Input { Value = 0, Expression = "-Mezcla.Angulo*(1 - max(0, 2*Mezcla.Progreso - 1))*(1 - max(0, 2*Mezcla.Progreso - 1))", },
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Zoom*sin(Mezcla.Progreso*3.14159265)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 33 } },
+				},
+				BlurSaliente = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "Mezcla.Desenfoque*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+						Input = Input { SourceOp = "GiroSaliente", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -33 } },
+				},
+				BlurEntrante = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "Mezcla.Desenfoque*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+						Input = Input { SourceOp = "GiroEntrante", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 33 } },
+				},
+				Mezcla = Dissolve {
+					CtrlWShown = false,
+					Inputs = {
+						Mix = Input { Value = 0, Expression = "(max(0, min(1, (Mezcla.Progreso - 0.42)/0.16)))*(max(0, min(1, (Mezcla.Progreso - 0.42)/0.16)))*(3-2*(max(0, min(1, (Mezcla.Progreso - 0.42)/0.16))))", },
+						Background = Input { SourceOp = "BlurSaliente", Source = "Output", },
+						Foreground = Input { SourceOp = "BlurEntrante", Source = "Output", },
+						Progreso = Input { SourceOp = "PROGiroAnim", Source = "Value", },
+						Angulo = Input { Value = 180, },
+						Zoom = Input { Value = 1, },
+						Desenfoque = Input { Value = 25, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Angulo = {
+							LINKS_Name = "Giro (grados, negativo = al otro lado)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 180,
+							INP_MinScale = -720,
+							INP_MaxScale = 720,
+							INP_MinAllowed = -720,
+							INP_MaxAllowed = 720,
+							ICS_ControlPage = "Controls",
+						},
+						Zoom = {
+							LINKS_Name = "Zoom para tapar esquinas",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+						Desenfoque = {
+							LINKS_Name = "Desenfoque",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 25,
+							INP_MinScale = 0,
+							INP_MaxScale = 100,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 100,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PROGiroAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_Giro"
+}

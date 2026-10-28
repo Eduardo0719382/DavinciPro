@@ -1498,6 +1498,552 @@ def tarjeta(name, anim):
     return macro(name, [("Reducir", "Input")], pubs, h, tools)
 
 
+# ======================================================================= LOTE 8: texto social, transiciones, camaras y clima
+def numbered(pubs):
+    """Aplana los pub() y cambia los grupos simbolicos ("c1", "f1"...) por el indice del primer control del grupo."""
+    flat, first = [], {}
+    for p in pubs:
+        flat += p if isinstance(p, list) else [p]
+    for i, p in enumerate(flat, 1):
+        if isinstance(p["group"], str):
+            p["group"] = first.setdefault(p["group"], i)
+    return flat
+
+
+def text_pubs(tool, label, size, rgb, key):
+    """Fuente, estilo, tamano y color de un Text+ (grupos simbolicos para numbered())."""
+    return [pub(tool, "Font", f"Fuente{label}", group=f"f{key}"), pub(tool, "Style", group=f"f{key}"),
+            pub(tool, "Size", f"Tamaño{label}", size),
+            pub_color(tool, f"Color{label}", rgb, f"c{key}", prefix="", suffix="1")]
+
+
+def ui_color(tool, src="ColorUI", text=False):
+    """Hace que un fondo (o un Text+) tome el color del selector comun."""
+    for ch in ("Red", "Green", "Blue"):
+        tool.inputs[f"{ch}1" if text else f"TopLeft{ch}"] = I(1, f"{src}.TopLeft{ch}")
+    return tool
+
+
+def timecode(seconds, frames=None):
+    """Texto hh:mm:ss (o hh:mm:ss:ff) calculado a partir de una expresion en segundos."""
+    s = seconds
+    parts = [f"floor({s}/3600) - 24*floor({s}/86400)", f"floor({s}/60) - 60*floor({s}/3600)", f"floor({s}) - 60*floor({s}/60)"]
+    fmt = "%02d:%02d:%02d"
+    if frames:
+        parts.append(f"floor(time) - {frames}*floor(time/{frames})")
+        fmt += ":%02d"
+    return f'Text(string.format("{fmt}", {", ".join(parts)}))'
+
+
+def mean_stack(prefix, src, size_expr, center_expr, n, pos_x):
+    """n copias escaladas de src promediadas (desenfoque radial aproximado). size_expr/center_expr reciben k/n."""
+    tools, last = [], src
+    for k in range(1, n + 1):
+        f = f"{k / n:g}"
+        tinputs = {"Input": I(link=src), "Size": I(1, size_expr(f))}
+        if center_expr:
+            tinputs["Center"] = I((0.5, 0.5), center_expr(f))
+        tools += [Tool(f"{prefix}{k}", "Transform", tinputs, pos=(pos_x + 33 * k, -66)),
+                  merge(f"{prefix}Media{k}", last, f"{prefix}{k}", (pos_x + 33 * k, 0), blend=1 / (k + 1))]
+        last = f"{prefix}Media{k}"
+    return tools, last
+
+
+# ----------------------------------------------------------------------- titulos de texto
+@register("Titles", "PRO_TTL_Texto_Maquina")
+def texto_maquina(name, anim):
+    """Maquina de escribir: la frase aparece letra a letra, con cursor parpadeante opcional."""
+    h = "Maquina"
+    src = "Fuente.StyledText.Value"
+    n = f"floor({h}.U*string.len({src}) + 0.5)"
+    cursor = f'string.rep("|", {h}.Cursor*iif(sin(time*0.5) > 0, 1, 0))'
+    ucs, inputs = kit(h, 0.6, 0.1, [uc("Cursor", "Cursor parpadeante", 1, 0, 1, checkbox=True)], {"Cursor": I(1)})
+    body = [text_tool("Fuente", "Escribe aquí tu frase...", 0.06, (0.5, 0.5), (-385, -198)),
+            text_tool("Texto", "", 0.06, (0.12, 0.5), (-385, -132), font="Courier New", left=True,
+                      extra={"StyledText": I("", f"Text(string.sub({src}, 1, {n}) .. {cursor})")})]
+    pubs = numbered([pub("Fuente", "StyledText", "Texto"), *text_pubs("Texto", "", 0.06, (1, 1, 1), 1),
+                     pub("Texto", "Center", "Inicio del texto"), pub(h, "Cursor", "Cursor parpadeante", 1)])
+    return title(name, h, ucs, inputs, body, [("Texto", f"{h}.Xs")], pubs)
+
+
+@register("Titles", "PRO_TTL_Texto_Resaltado")
+def texto_resaltado(name, anim):
+    """Palabra con un resaltador de color que se dibuja detras de izquierda a derecha (subtitulos tipo CapCut)."""
+    h = "Resaltado"
+    grow = smooth(clamp01(f"({h}.U - 0.25)/0.75"))
+    ucs, inputs = kit(h, 0.3, 0.12, [uc("Ancho", "Ancho del resaltado", 0.42, 0.02, 1),
+                                     uc("Alto", "Alto del resaltado", 0.075, 0.005, 0.3),
+                                     uc("Inclinacion", "Inclinación (grados)", -2, -15, 15)],
+                      {"Ancho": I(0.42), "Alto": I(0.075), "Inclinacion": I(-2)})
+    body = [rect("MascBanda", (-385, -165), Center=I((0.29, 0.497), f"Point(0.5 - {h}.Ancho/2 + {h}.Ancho*{grow}/2, 0.497)"),
+                 Width=I(0, f"{h}.Ancho*{grow}"), Height=I(0.075, f"{h}.Alto"), CornerRadius=I(0.15),
+                 Angle=I(-2, f"{h}.Inclinacion")),
+            solid("Banda", (1, 0.85, 0.1), (-385, -132), mask="MascBanda"),
+            text_tool("Texto", "PALABRA CLAVE", 0.07, (0.5, 0.5), (-330, -132), rgb=(0.05, 0.05, 0.05))]
+    pubs = numbered([pub("Texto", "StyledText", "Texto"), *text_pubs("Texto", " del texto", 0.07, (0.05, 0.05, 0.05), 1),
+                     pub_color("Banda", "Color del resaltado", (1, 0.85, 0.1), "c2"), pub(h, "Ancho", "Ancho del resaltado", 0.42),
+                     pub(h, "Alto", "Alto del resaltado", 0.075), pub(h, "Inclinacion", "Inclinación (grados)", -2)])
+    return title(name, h, ucs, inputs, body, [("Banda", f"{h}.Xs"), ("Texto", stage(h, 0, 0.35))], pubs)
+
+
+@register("Titles", "PRO_TTL_Texto_Brillo")
+def texto_brillo(name, anim):
+    """Texto con un destello diagonal que lo recorre cada cierto numero de fotogramas (estilo logo premium)."""
+    h = "Brillo"
+    ph = f"(time/{h}.Periodo - floor(time/{h}.Periodo))"
+    ucs, inputs = kit(h, 0.15, 0.1, [uc("Periodo", "Fotogramas entre destellos", 60, 10, 300),
+                                     uc("Intensidad", "Intensidad del destello", 1.2, 0, 4),
+                                     uc("AnchoBrillo", "Ancho del destello", 0.06, 0.005, 0.3)],
+                      {"Periodo": I(60), "Intensidad": I(1.2), "AnchoBrillo": I(0.06)})
+    body = [text_tool("Texto", "BRILLO", 0.12, (0.5, 0.5), (-385, -132), rgb=(0.95, 0.75, 0.3)),
+            rect("Franja", (-330, -165), Center=I((0.5, 0.5), f"Point(-0.3 + 1.6*min(1, {ph}/0.4), 0.5)"),
+                 Width=I(0.06, f"{h}.AnchoBrillo"), Height=I(4), Angle=I(20), SoftEdge=I(0.03)),
+            Tool("Destello", "BrightnessContrast", {"Input": I(link="Texto"), "EffectMask": I(link="Franja", out="Mask"),
+                                                    "Gain": I(2.2, f"1 + {h}.Intensidad"), "Saturation": I(0.4)}, pos=(-275, -132))]
+    pubs = numbered([pub("Texto", "StyledText", "Texto"), *text_pubs("Texto", "", 0.12, (0.95, 0.75, 0.3), 1),
+                     pub(h, "Periodo", "Fotogramas entre destellos", 60), pub(h, "Intensidad", "Intensidad del destello", 1.2),
+                     pub(h, "AnchoBrillo", "Ancho del destello", 0.06)])
+    return title(name, h, ucs, inputs, body, [("Destello", stage(h, 0, 1))], pubs)
+
+
+@register("Titles", "PRO_TTL_Texto_Neon")
+def texto_neon(name, anim):
+    """Letrero de neon: se enciende parpadeando y despues falla de vez en cuando."""
+    h = "Neon"
+    falla = f"iif(sin(time*1.37)*sin(time*2.71 + 1)*sin(time*0.53 + 2) > 1 - {h}.Parpadeo*0.6, 0.3, 1)"
+    encendido = f"iif({h}.U < 1, iif(sin(time*2.3)*sin(time*0.9 + 1) > 0, 1, 0.15), 1)"
+    ucs, inputs = kit(h, 0.25, 0.1, [uc("Glow", "Brillo del halo", 0.8, 0, 1), uc("Parpadeo", "Fallos de parpadeo", 0.3, 0, 1),
+                                     uc("F", "Encendido interno", 1, 0, 1, clamp=False)],
+                      {"Glow": I(0.8), "Parpadeo": I(0.3), "F": I(1, f"{falla}*{encendido}")})
+    body = [text_tool("Texto", "NEON", 0.14, (0.5, 0.5), (-385, -132), rgb=(1, 0.25, 0.7)),
+            Tool("Nucleo", "BrightnessContrast", {"Input": I(link="Texto"), "Gain": I(1.3), "Saturation": I(0.35)}, pos=(-330, -165)),
+            Tool("HaloCerca", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(10), "Input": I(link="Texto")}, pos=(-330, -132)),
+            Tool("HaloLejos", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(45), "Input": I(link="Texto")}, pos=(-330, -99))]
+    pubs = numbered([pub("Texto", "StyledText", "Texto"), *text_pubs("Texto", "", 0.14, (1, 0.25, 0.7), 1),
+                     pub(h, "Glow", "Brillo del halo", 0.8), pub("HaloLejos", "XBlurSize", "Radio del halo", 45),
+                     pub(h, "Parpadeo", "Fallos de parpadeo", 0.3)])
+    layers = [("HaloLejos", f"{h}.Glow*0.8*{h}.F*{h}.Xs"), ("HaloCerca", f"{h}.Glow*{h}.F*{h}.Xs"),
+              ("Nucleo", f"(0.35 + 0.65*{h}.F)*{h}.Xs")]
+    return title(name, h, ucs, inputs, body, layers, pubs)
+
+
+# ----------------------------------------------------------------------- transiciones
+@register("Transitions", "PRO_TR_ZoomRadial")
+def tr_zoom_radial(name, anim):
+    """Zoom con desenfoque radial (copias escaladas promediadas): A se lanza hacia la camara y B llega desde ella."""
+    h = "Mezcla"
+    p = f"{h}.Progreso"
+    a, b = f"min(1, 2*{p})", f"(1 - max(0, 2*{p} - 1))"
+    bell = f"sin({p}*{PI})*sin({p}*{PI})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Zoom", "Zoom", 0.6, 0, 3), uc("Fuerza", "Desenfoque radial", 1, 0, 3)]
+    tools = [Tool("ZoomSaliente", "Transform", {"Size": I(1, f"1 + {h}.Zoom*{a}*{a}")}, pos=(-220, -33)),
+             Tool("ZoomEntrante", "Transform", {"Size": I(1, f"1 + {h}.Zoom*{b}*{b}")}, pos=(-220, 33)),
+             Tool(h, "Dissolve", {"Mix": I(0, smooth(clamp01(f"({p} - 0.45)/0.1"))),
+                                  "Background": I(link="ZoomSaliente"), "Foreground": I(link="ZoomEntrante"),
+                                  "Progreso": I(link=anim, out="Value"), "Zoom": I(0.6), "Fuerza": I(1)}, ucs, (-110, 0))]
+    t, last = mean_stack("Radial", h, lambda f: f"1 + {h}.Fuerza*0.25*{f}*{bell}", None, 6, -110)
+    tools += t
+    pubs = [pub(h, "Zoom", "Zoom", 0.6), pub(h, "Fuerza", "Desenfoque radial", 1)]
+    return macro(name, [("ZoomSaliente", "Input"), ("ZoomEntrante", "Input")], pubs, last, tools, anim)
+
+
+@register("Transitions", "PRO_TR_Giro")
+def tr_giro(name, anim):
+    """Giro: A rota y se desenfoca, B termina el giro en el mismo sentido. El zoom tapa las esquinas."""
+    h = "Mezcla"
+    p = f"{h}.Progreso"
+    a, b = f"min(1, 2*{p})", f"(1 - max(0, 2*{p} - 1))"
+    bell = f"sin({p}*{PI})"
+    blur = f"{h}.Desenfoque*{bell}*{bell}"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Angulo", "Giro (grados, negativo = al otro lado)", 180, -720, 720),
+           uc("Zoom", "Zoom para tapar esquinas", 1, 0, 3), uc("Desenfoque", "Desenfoque", 25, 0, 100)]
+    tools = [Tool("GiroSaliente", "Transform", {"Angle": I(0, f"{h}.Angulo*{a}*{a}"), "Size": I(1, f"1 + {h}.Zoom*{bell}")}, pos=(-220, -33)),
+             Tool("GiroEntrante", "Transform", {"Angle": I(0, f"-{h}.Angulo*{b}*{b}"), "Size": I(1, f"1 + {h}.Zoom*{bell}")}, pos=(-220, 33)),
+             Tool("BlurSaliente", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, blur),
+                                           "Input": I(link="GiroSaliente")}, pos=(-110, -33)),
+             Tool("BlurEntrante", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, blur),
+                                           "Input": I(link="GiroEntrante")}, pos=(-110, 33)),
+             Tool(h, "Dissolve", {"Mix": I(0, smooth(clamp01(f"({p} - 0.42)/0.16"))),
+                                  "Background": I(link="BlurSaliente"), "Foreground": I(link="BlurEntrante"),
+                                  "Progreso": I(link=anim, out="Value"), "Angulo": I(180), "Zoom": I(1), "Desenfoque": I(25)},
+                  ucs, (0, 0))]
+    pubs = [pub(h, "Angulo", "Giro (grados, negativo = al otro lado)", 180), pub(h, "Zoom", "Zoom para tapar esquinas", 1),
+            pub(h, "Desenfoque", "Desenfoque", 25)]
+    return macro(name, [("GiroSaliente", "Input"), ("GiroEntrante", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_Barras")
+def tr_barras(name, anim):
+    """Barras verticales que entran escalonadas, alternando arriba y abajo, y descubren el clip B (estilo Mister Horse)."""
+    h = "Barras"
+    p = f"{h}.Progreso"
+    n = 8
+    tools = [Tool("EntradaA", "PipeRouter", pos=(-440, 0)), Tool("EntradaB", "PipeRouter", pos=(-440, 66))]
+    last = "EntradaA"
+    for i in range(n):
+        e = smooth(clamp01(f"{p}*(1 + {h}.Escalonado) - {h}.Escalonado*{i / (n - 1):g}"))
+        d = "1" if i % 2 == 0 else f"(1 - 2*{h}.Alternar)"
+        x = (i + 0.5) / n
+        tools += [rect(f"MascBarra{i}", (-385 + 44 * i, -99), Center=I((x, 1.55), f"Point({x:g}, 0.5 + {d}*1.05*(1 - {e}))"),
+                       Width=I(1 / n + 0.002), Height=I(0.59, f"1.05/{h}.Aspecto")),
+                  merge(f"Barra{i}", last, "EntradaB", (-385 + 44 * i, 0), extra={"EffectMask": I(link=f"MascBarra{i}", out="Mask")})]
+        last = f"Barra{i}"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Escalonado", "Escalonado", 0.6, 0, 3),
+           uc("Alternar", "Alternar arriba / abajo", 1, 0, 1, checkbox=True),
+           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Progreso": I(link=anim, out="Value"),
+                                                "Escalonado": I(0.6), "Alternar": I(1), "Aspecto": I(1.7778)}, ucs, (0, 0)))
+    pubs = [pub(h, "Escalonado", "Escalonado", 0.6), pub(h, "Alternar", "Alternar arriba / abajo", 1),
+            pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778)]
+    return macro(name, [("EntradaA", "Input"), ("EntradaB", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_Iris")
+def tr_iris(name, anim):
+    """Circulo que crece desde un punto y descubre el clip B, con un aro de color en el borde."""
+    h = "Iris"
+    p = f"{h}.Progreso"
+    d = f"{h}.Tamano*{smooth(p)}*{smooth(p)}"
+    c = f"Point({h}.CX, {h}.CY)"
+    tools = [Tool("EntradaA", "PipeRouter", pos=(-330, 0)), Tool("EntradaB", "PipeRouter", pos=(-330, 66)),
+             ellipse("MascAro", (-275, -99), Center=I((0.5, 0.5), c), SoftEdge=I(0.003),
+                     Width=I(0, f"{d} + {h}.Borde*sin({p}*{PI})"), Height=I(0, f"{d} + {h}.Borde*sin({p}*{PI})")),
+             solid("Aro", (1, 1, 1), (-275, -66), mask="MascAro"),
+             ellipse("MascIris", (-220, -99), Center=I((0.5, 0.5), c), SoftEdge=I(0.003, f"{h}.Suavidad"),
+                     Width=I(0, d), Height=I(0, d)),
+             merge("ConAro", "EntradaA", "Aro", (-220, 0)),
+             merge("ConIris", "ConAro", "EntradaB", (-165, 0), extra={"EffectMask": I(link="MascIris", out="Mask")})]
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("CX", "Origen X", 0.5, 0, 1), uc("CY", "Origen Y", 0.5, 0, 1),
+           uc("Borde", "Grosor del aro", 0.03, 0, 0.2), uc("Suavidad", "Suavidad del borde", 0.003, 0, 0.2),
+           uc("Tamano", "Tamaño final (súbelo si quedan esquinas)", 4.2, 1, 8)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConIris"), "Progreso": I(link=anim, out="Value"), "CX": I(0.5),
+                                                "CY": I(0.5), "Borde": I(0.03), "Suavidad": I(0.003), "Tamano": I(4.2)}, ucs, (-110, 0)))
+    pubs = numbered([pub(h, "CX", "Origen X", 0.5), pub(h, "CY", "Origen Y", 0.5), pub(h, "Borde", "Grosor del aro", 0.03),
+                     pub_color("Aro", "Color del aro", (1, 1, 1), "c1"), pub(h, "Suavidad", "Suavidad del borde", 0.003),
+                     pub(h, "Tamano", "Tamaño final (súbelo si quedan esquinas)", 4.2)])
+    return macro(name, [("EntradaA", "Input"), ("EntradaB", "Input")], pubs, h, tools, anim)
+
+
+# ----------------------------------------------------------------------- camaras
+@register("Effects", "PRO_FX_Cam_REC")
+def cam_rec(name, anim):
+    """Interfaz de videocamara: punto REC parpadeante, codigo de tiempo que corre, bateria y esquinas de encuadre."""
+    h = "REC"
+    asp = f"{h}.Aspecto"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-660, 0)), solid("ColorUI", (1, 1, 1), (-660, -264)),
+             solid("Lienzo", (0, 0, 0), (-605, 0), alpha=0)]
+    layers = []
+    for j, (sx, sy) in enumerate(((-1, 1), (1, 1), (-1, -1), (1, -1))):
+        cx = f"0.5 + {sx}*(0.5 - {h}.Margen)"
+        cy = f"0.5 + {sy}*(0.5 - {h}.Margen*{asp})"
+        for k, (center, w, ht) in enumerate(((f"Point({cx} - {sx}*{h}.Largo/2, {cy})", f"{h}.Largo", f"{h}.Grosor"),
+                                             (f"Point({cx}, {cy} - {sy}*{h}.Largo*{asp}/2)", f"{h}.Grosor", f"{h}.Largo"))):
+            m = f"Esq{j}{k}"
+            tools += [rect(f"Masc{m}", (-550 + 33 * (2 * j + k), -198), Center=I((0.5, 0.5), center),
+                           Width=I(0.06, w), Height=I(0.004, ht)),
+                      ui_color(solid(m, (1, 1, 1), (-550 + 33 * (2 * j + k), -165), mask=f"Masc{m}"))]
+            layers.append(m)
+    tools += [ellipse("MascPunto", (-275, -198), Center=I((0.09, 0.88)), Width=I(0.022), Height=I(0.022), SoftEdge=I(0.002)),
+              solid("Punto", (1, 0.1, 0.1), (-275, -165), mask="MascPunto"),
+              ui_color(text_tool("TextoREC", "REC", 0.035, (0.14, 0.88), (-220, -165)), text=True),
+              ui_color(text_tool("Codigo", "00:00:00:00", 0.035, (0.82, 0.88), (-165, -165), font="Courier New",
+                                 extra={"StyledText": I("00:00:00:00", timecode(f"(time/{h}.FPS + {h}.Inicio)", f"{h}.FPS"))}), text=True),
+              ui_color(text_tool("Info", "4K  30p", 0.03, (0.14, 0.12), (-110, -165), style="Regular"), text=True),
+              rect("MascPila", (-55, -198), Center=I((0.86, 0.12)), Width=I(0.05), Height=I(0.022), Solid=I(0), BorderWidth=I(0.002)),
+              ui_color(solid("Pila", (1, 1, 1), (-55, -165), mask="MascPila")),
+              rect("MascCarga", (0, -198), Center=I((0.86, 0.12), f"Point(0.84 + 0.02*{h}.Bateria, 0.12)"),
+                   Width=I(0.028, f"0.04*{h}.Bateria"), Height=I(0.014)),
+              ui_color(solid("Carga", (1, 1, 1), (0, -165), mask="MascCarga")),
+              rect("MascBorne", (55, -198), Center=I((0.888, 0.12)), Width=I(0.004), Height=I(0.01)),
+              ui_color(solid("Borne", (1, 1, 1), (55, -165), mask="MascBorne"))]
+    blink = f"iif(sin(time*{PI}/{h}.FPS) > 0, 1, 0)"
+    t, last = compose([(m, None) for m in layers] + [("Punto", blink), ("TextoREC", None), ("Codigo", None), ("Info", None),
+                                                    ("Pila", None), ("Carga", None), ("Borne", None)], x0=-550)
+    tools += t
+    tools.append(merge("Interfaz", "Entrada", last, (330, 0), blend=0.9))
+    ucs = [uc("FPS", "Fotogramas por segundo", 30, 1, 120), uc("Inicio", "Código inicial (segundos)", 0, 0, 86399),
+           uc("Bateria", "Carga de la batería", 0.7, 0, 1), uc("Margen", "Margen de las esquinas", 0.05, 0, 0.3),
+           uc("Largo", "Largo de las esquinas", 0.06, 0.005, 0.3), uc("Grosor", "Grosor de las líneas", 0.004, 0.001, 0.03),
+           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Interfaz"), "FPS": I(30), "Inicio": I(0), "Bateria": I(0.7),
+                                                "Margen": I(0.05), "Largo": I(0.06), "Grosor": I(0.004), "Aspecto": I(1.7778)},
+                      ucs, (385, 0)))
+    pubs = numbered([pub_color("ColorUI", "Color de la interfaz", (1, 1, 1), "c1"), pub("Interfaz", "Blend", "Opacidad", 0.9),
+                     pub("Info", "StyledText", "Texto inferior"), pub(h, "FPS", "Fotogramas por segundo", 30),
+                     pub(h, "Inicio", "Código inicial (segundos)", 0), pub(h, "Bateria", "Carga de la batería", 0.7),
+                     pub(h, "Margen", "Margen de las esquinas", 0.05), pub(h, "Largo", "Largo de las esquinas", 0.06),
+                     pub(h, "Grosor", "Grosor de las líneas", 0.004),
+                     pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778)])
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+def scanlines(name, src, host, pos_x, high=0.5):
+    """Lineas horizontales oscuras: onda triangular vertical aplanada, multiplicada sobre la imagen."""
+    return [pingpong_bg(f"{name}Onda", f"Point(0.5, 0.5 + 0.5/{host}.NumLineas)", (pos_x, -132)),
+            Tool(f"{name}Plana", "BrightnessContrast", {"Input": I(link=f"{name}Onda"), "Low": I(0), "High": I(high)}, pos=(pos_x, -99)),
+            merge(name, src, f"{name}Plana", (pos_x + 55, 0), "Multiply", blend=0.3, blend_expr=f"{host}.Lineas")], name
+
+
+@register("Effects", "PRO_FX_Cam_Seguridad")
+def cam_seguridad(name, anim):
+    """Camara de seguridad: casi sin color, tinte verdoso, ruido, lineas, nombre de camara, fecha y reloj que corre."""
+    h = "CCTV"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-550, 0)),
+             Tool("Look", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(0.15), "Contrast": I(0.25),
+                                                 "Gain": I(1.05), "Lift": I(0.03)}, pos=(-495, 0))]
+    t, last = blk_cast("Tinte", "Look", -440, (0.85, 1, 0.9), 1)
+    tools += t
+    t, last = blk_grain("Gr", last, f"{h}.Ruido", -330, scale=80)
+    tools += t
+    t, last = scanlines("Lineas", last, h, -220)
+    tools += t
+    t, last = blk_vignette("Vin", last, -110, amount=0.45)
+    tools += t
+    s = f"({h}.Hora*3600 + time/{h}.FPS)"
+    tools += [solid("Lienzo", (0, 0, 0), (0, -66), alpha=0),
+              text_tool("Camara", "CAM 01", 0.035, (0.12, 0.9), (0, -165), font="Courier New"),
+              text_tool("Fecha", "27/10/2026", 0.035, (0.17, 0.08), (55, -165), font="Courier New"),
+              text_tool("Reloj", "14:30:00", 0.035, (0.85, 0.08), (110, -165), font="Courier New",
+                        extra={"StyledText": I("14:30:00", timecode(s))})]
+    for tn in ("Fecha", "Reloj"):
+        next(x for x in tools if x.name == tn).inputs.update({f"{ch}1": I(1, f"Camara.{ch}1") for ch in ("Red", "Green", "Blue")})
+    t, over = compose([("Camara", None), ("Fecha", None), ("Reloj", None)], x0=55)
+    tools += t
+    tools.append(merge("Textos", last, over, (220, 0), blend=0.9))
+    ucs = [uc("Ruido", "Ruido", 0.2, 0, 1), uc("Lineas", "Líneas", 0.3, 0, 1), uc("NumLineas", "Número de líneas", 240, 20, 1000),
+           uc("Hora", "Hora inicial (14.5 = 14:30)", 14.5, 0, 24), uc("FPS", "Fotogramas por segundo", 30, 1, 120)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Textos"), "Ruido": I(0.2), "Lineas": I(0.3), "NumLineas": I(240),
+                                                "Hora": I(14.5), "FPS": I(30)}, ucs, (275, 0)))
+    pubs = numbered([pub("Camara", "StyledText", "Nombre de la cámara"), pub("Fecha", "StyledText", "Fecha"),
+                     pub(h, "Hora", "Hora inicial (14.5 = 14:30)", 14.5), pub(h, "FPS", "Fotogramas por segundo", 30),
+                     pub("Look", "Saturation", "Color (0 = blanco y negro)", 0.15), pub_color("TinteColor", "Tinte", (0.85, 1, 0.9), "c1"),
+                     pub(h, "Ruido", "Ruido", 0.2), pub(h, "Lineas", "Líneas", 0.3), pub(h, "NumLineas", "Número de líneas", 240),
+                     pub("VinVineta", "Blend", "Viñeta", 0.45), pub("Textos", "Blend", "Opacidad del texto", 0.9),
+                     pub_color("Camara", "Color del texto", (1, 1, 1), "c2", prefix="", suffix="1")])
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Cam_VisionNocturna")
+def vision_nocturna(name, anim):
+    """Vision nocturna: luminancia amplificada en verde, brillo en las luces, grano fuerte y visor circular."""
+    h = "Nocturna"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)),
+             Tool("Amplificar", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(0), "Gain": I(1.6),
+                                                       "Contrast": I(0.1)}, pos=(-385, 0))]
+    t, last = blk_cast("Tono", "Amplificar", -330, (0.25, 1, 0.3), 1)
+    tools += t
+    t, last = blk_bloom("Bl", last, -220, low=0.6, radius=30, blend=0.4)
+    tools += t
+    t, last = blk_grain("Gr", last, None, -55, scale=60)
+    tools += t
+    tools[-1].inputs["Blend"] = I(0.25)
+    tools += [ellipse("MascVisor", (55, -99), Invert=I(1), SoftEdge=I(0.12), Width=I(0.9), Height=I(0.9)),
+              solid("Negro", (0, 0, 0), (55, -66), mask="MascVisor"),
+              merge(h, last, "Negro", (110, 0), blend=1)]
+    pubs = numbered([pub("Amplificar", "Gain", "Amplificación", 1.6), pub_color("TonoColor", "Color", (0.25, 1, 0.3), "c1"),
+                     pub("BlBloom", "Blend", "Brillo en las luces", 0.4), pub("GrGrano", "Blend", "Grano", 0.25),
+                     pub(h, "Blend", "Visor", 1), pub("MascVisor", "Width", "Ancho del visor", 0.9),
+                     pub("MascVisor", "Height", "Alto del visor", 0.9), pub("MascVisor", "SoftEdge", "Suavidad del visor", 0.12)])
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Cam_Termica")
+def cam_termica(name, anim):
+    """Camara termica: la luminancia se pinta con tres colores (frio, medio, caliente)."""
+    h = "Termica"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)),
+             Tool("Luma", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(0), "Contrast": I(0.2)}, pos=(-385, -66)),
+             Tool("Suave", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(3), "Input": I(link="Luma")}, pos=(-330, -66)),
+             Tool("Bajo", "BrightnessContrast", {"Input": I(link="Suave"), "Low": I(0), "High": I(0.5)}, pos=(-275, -132)),
+             Tool("Alto", "BrightnessContrast", {"Input": I(link="Suave"), "Low": I(0.5), "High": I(1)}, pos=(-275, 0)),
+             solid("Blanco", (1, 1, 1), (-275, -198)),
+             merge("PesoFrio", "Blanco", "Bajo", (-220, -198), "Difference"),
+             merge("PesoMedio", "Bajo", "Alto", (-220, -132), "Difference"),
+             solid("Frio", (0.05, 0.05, 0.45), (-165, -231)),
+             solid("Medio", (0.9, 0.1, 0.5), (-165, -165)),
+             solid("Caliente", (1, 0.9, 0.2), (-165, -33)),
+             merge("ParteFrio", "PesoFrio", "Frio", (-110, -198), "Multiply"),
+             merge("ParteMedio", "PesoMedio", "Medio", (-110, -132), "Multiply"),
+             merge("ParteCaliente", "Alto", "Caliente", (-110, -66), "Multiply"),
+             merge("Suma1", "ParteFrio", "ParteMedio", (-55, -165), extra={"SubtractiveAdditive": I(0)}),
+             merge("Suma2", "Suma1", "ParteCaliente", (0, -99), extra={"SubtractiveAdditive": I(0)}),
+             merge(h, "Entrada", "Suma2", (55, 0), blend=1)]
+    pubs = numbered([pub_color("Frio", "Color frío", (0.05, 0.05, 0.45), "c1"), pub_color("Medio", "Color medio", (0.9, 0.1, 0.5), "c2"),
+                     pub_color("Caliente", "Color caliente", (1, 0.9, 0.2), "c3"), pub("Luma", "Contrast", "Contraste", 0.2),
+                     pub("Suave", "XBlurSize", "Suavidad", 3), pub(h, "Blend", "Mezcla con el original", 1)])
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Retro_CRT")
+def retro_crt(name, anim):
+    """Televisor de tubo: separacion de color, brillo, lineas de barrido, parpadeo y pantalla con esquinas redondeadas."""
+    h = "CRT"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-550, 0))]
+    t, last = blk_channel_shift("Sep", "Entrada", f"{h}.Separacion", "0", -495)
+    tools += t
+    t, last = blk_bloom("Bl", last, -220, low=0.6, radius=25, blend=0.35)
+    tools += t
+    t, last = scanlines("Lineas", last, h, -55, high=0.6)
+    tools += t
+    tools += [Tool("Parpadeo", "BrightnessContrast", {"Input": I(link=last),
+                   "Gain": I(1, f"1 + {h}.Parpadeo*0.04*sin(time*9.1)*sin(time*4.3 + 1)")}, pos=(55, 0)),
+              rect("MascPantalla", (110, -99), Invert=I(1), Width=I(0.96), Height=I(0.54, f"0.96/{h}.Aspecto"),
+                   CornerRadius=I(0.12), SoftEdge=I(0.01)),
+              solid("Marco", (0.02, 0.02, 0.02), (110, -66), mask="MascPantalla"),
+              merge("ConMarco", "Parpadeo", "Marco", (165, 0), blend=1)]
+    t, last = blk_vignette("Vin", "ConMarco", 220, amount=0.35)
+    tools += t
+    ucs = [uc("Separacion", "Separación de color", 0.002, 0, 0.02), uc("Lineas", "Líneas", 0.3, 0, 1),
+           uc("NumLineas", "Número de líneas", 300, 50, 1000), uc("Parpadeo", "Parpadeo", 1, 0, 5),
+           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Separacion": I(0.002), "Lineas": I(0.3), "NumLineas": I(300),
+                                                "Parpadeo": I(1), "Aspecto": I(1.7778)}, ucs, (330, 0)))
+    pubs = [pub(h, "Separacion", "Separación de color", 0.002), pub("BlBloom", "Blend", "Brillo", 0.35),
+            pub(h, "Lineas", "Líneas", 0.3), pub(h, "NumLineas", "Número de líneas", 300), pub(h, "Parpadeo", "Parpadeo", 1),
+            pub("ConMarco", "Blend", "Marco de la pantalla", 1), pub("MascPantalla", "CornerRadius", "Redondeo de la pantalla", 0.12),
+            pub("VinVineta", "Blend", "Viñeta", 0.35), pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+# ----------------------------------------------------------------------- composicion y movimiento
+@register("Effects", "PRO_FX_Social_PantallaDividida")
+def pantalla_dividida(name, anim):
+    """Coloca el clip en una celda de una rejilla (filas x columnas). Pon cada clip en su pista con su celda."""
+    h = "Celda"
+    cw, ch = f"(1/{h}.Columnas)", f"(1/{h}.Filas)"
+    cx, cy = f"(({h}.Columna - 0.5)*{cw})", f"(1 - ({h}.Fila - 0.5)*{ch})"
+    tools = [Tool("Colocar", "Transform", {"Center": I((0.5, 0.75), f"Point({cx} + {h}.MoverX, {cy} + {h}.MoverY)"),
+                                           "Size": I(1, f"max({cw}, {ch})*{h}.Zoom")}, pos=(-220, 0)),
+             solid("Vacio", (0, 0, 0), (-220, -66), alpha=0),
+             rect("MascCelda", (-165, -99), Center=I((0.5, 0.75), f"Point({cx}, {cy})"),
+                  Width=I(1, f"max(0, {cw} - {h}.Separacion)"), Height=I(0.89, f"max(0, {ch}/{h}.Aspecto - {h}.Separacion)"),
+                  CornerRadius=I(0, f"{h}.Redondeo"))]
+    ucs = [uc("Columnas", "Columnas", 1, 1, 4, integer=True), uc("Filas", "Filas", 2, 1, 4, integer=True),
+           uc("Columna", "Columna de este clip", 1, 1, 4, integer=True), uc("Fila", "Fila de este clip (1 = arriba)", 1, 1, 4, integer=True),
+           uc("Separacion", "Separación", 0.01, 0, 0.1), uc("Redondeo", "Redondeo de esquinas", 0, 0, 0.5),
+           uc("Zoom", "Zoom dentro de la celda", 1, 0.5, 3), uc("MoverX", "Encuadre X", 0, -0.5, 0.5), uc("MoverY", "Encuadre Y", 0, -0.5, 0.5),
+           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625, 0.4, 3)]
+    tools.append(merge(h, "Vacio", "Colocar", (-110, 0), blend=1, ucs=ucs, extra={
+        "EffectMask": I(link="MascCelda", out="Mask"), "Columnas": I(1), "Filas": I(2), "Columna": I(1), "Fila": I(1),
+        "Separacion": I(0.01), "Redondeo": I(0), "Zoom": I(1), "MoverX": I(0), "MoverY": I(0), "Aspecto": I(0.5625)}))
+    pubs = [pub(h, "Columnas", "Columnas", 1), pub(h, "Filas", "Filas", 2), pub(h, "Columna", "Columna de este clip", 1),
+            pub(h, "Fila", "Fila de este clip (1 = arriba)", 1), pub(h, "Separacion", "Separación", 0.01),
+            pub(h, "Redondeo", "Redondeo de esquinas", 0), pub(h, "Zoom", "Zoom dentro de la celda", 1),
+            pub(h, "MoverX", "Encuadre X", 0), pub(h, "MoverY", "Encuadre Y", 0),
+            pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625)]
+    return macro(name, [("Colocar", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Din_KenBurns")
+def ken_burns(name, anim):
+    """Zoom y paneo lentos a lo largo del clip (fotos y planos fijos). Se adapta a cualquier duracion."""
+    h = "KenBurns"
+    p = f"{h}.Progreso"
+    e = f"({p} + {h}.Suave*({smooth(p)} - {p}))"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("ZoomIni", "Zoom inicial", 1.1, 1, 3), uc("ZoomFin", "Zoom final", 1.3, 1, 3),
+           uc("XIni", "Desplazamiento X inicial", -0.03, -0.5, 0.5), uc("XFin", "Desplazamiento X final", 0.03, -0.5, 0.5),
+           uc("YIni", "Desplazamiento Y inicial", 0, -0.5, 0.5), uc("YFin", "Desplazamiento Y final", 0, -0.5, 0.5),
+           uc("Suave", "Suavizado (0 = lineal)", 1, 0, 1)]
+    tools = [Tool(h, "Transform", {
+        "Size": I(1.1, f"{h}.ZoomIni + ({h}.ZoomFin - {h}.ZoomIni)*{e}"),
+        "Center": I((0.5, 0.5), f"Point(0.5 + {h}.XIni + ({h}.XFin - {h}.XIni)*{e}, 0.5 + {h}.YIni + ({h}.YFin - {h}.YIni)*{e})"),
+        "Progreso": I(link=anim, out="Value"), "ZoomIni": I(1.1), "ZoomFin": I(1.3), "XIni": I(-0.03), "XFin": I(0.03),
+        "YIni": I(0), "YFin": I(0), "Suave": I(1)}, ucs, (0, 0))]
+    pubs = [pub(h, n, lbl, d) for n, lbl, d in (("ZoomIni", "Zoom inicial", 1.1), ("ZoomFin", "Zoom final", 1.3),
+                                                ("XIni", "Desplazamiento X inicial", -0.03), ("XFin", "Desplazamiento X final", 0.03),
+                                                ("YIni", "Desplazamiento Y inicial", 0), ("YFin", "Desplazamiento Y final", 0),
+                                                ("Suave", "Suavizado (0 = lineal)", 1))]
+    return macro(name, [(h, "Input")], pubs, h, tools, anim)
+
+
+@register("Effects", "PRO_FX_Luz_Rayos")
+def luz_rayos(name, anim):
+    """Rayos de luz volumetricos desde un punto: las luces altas se estiran en copias escaladas desde el origen."""
+    h = "Rayos"
+
+    def center(f):
+        s = f"(1 + {h}.Largo*{f})"
+        return f"Point(0.5 + ({h}.OX - 0.5)*(1 - {s}), 0.5 + ({h}.OY - 0.5)*(1 - {s}))"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-550, 0)),
+             Tool("Altas", "BrightnessContrast", {"Input": I(link="Entrada"), "Low": I(0.7), "High": I(1), "Saturation": I(0.6)},
+                  pos=(-495, -66))]
+    t, last = mean_stack("Rayo", "Altas", lambda f: f"1 + {h}.Largo*{f}", center, 8, -495)
+    tools += t
+    tools += [Tool("Suaviza", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(3), "Input": I(link=last)}, pos=(-165, -66)),
+              solid("Tinte", (1, 0.9, 0.7), (-110, -99)),
+              merge("Tenido", "Suaviza", "Tinte", (-110, -66), "Multiply"),
+              Tool("Refuerzo", "BrightnessContrast", {"Input": I(link="Tenido"), "Gain": I(3)}, pos=(-55, -66))]
+    ucs = [uc("OX", "Origen X", 0.7, 0, 1), uc("OY", "Origen Y", 0.85, 0, 1), uc("Largo", "Largo de los rayos", 0.6, 0, 3)]
+    tools.append(merge(h, "Entrada", "Refuerzo", (0, 0), "Screen", blend=0.6, ucs=ucs,
+                       extra={"OX": I(0.7), "OY": I(0.85), "Largo": I(0.6)}))
+    pubs = numbered([pub(h, "OX", "Origen X", 0.7), pub(h, "OY", "Origen Y", 0.85), pub(h, "Largo", "Largo de los rayos", 0.6),
+                     pub(h, "Blend", "Intensidad", 0.6), pub("Altas", "Low", "Umbral de luces", 0.7),
+                     pub_color("Tinte", "Color de la luz", (1, 0.9, 0.7), "c1"), pub("Refuerzo", "Gain", "Refuerzo", 3)])
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+# ----------------------------------------------------------------------- clima
+@register("Effects", "PRO_FX_Clima_Lluvia")
+def clima_lluvia(name, anim):
+    """Lluvia en dos capas (cerca y lejos): motas de ruido estiradas en vertical que caen, inclinadas por el viento."""
+    h = "Lluvia"
+    v = f"{h}.Velocidad"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)),
+             Tool("Ambiente", "BrightnessContrast", {"Input": I(link="Entrada"), "Gain": I(0.88, f"1 - 0.25*{h}.Oscurecer"),
+                                                     "Saturation": I(0.85, f"1 - 0.3*{h}.Oscurecer")}, pos=(-385, 0))]
+    last = "Ambiente"
+    for i, (scale, low, yblur, speed, blend) in enumerate(((70, 0.9, 30, 0.035, 0.7), (35, 0.93, 60, 0.07, 0.5)), 1):
+        y = -165 + 66 * (i - 1)
+        tools += [Tool(f"Gotas{i}", "FastNoise", {**frame_format(), "Detail": I(10), "Contrast": I(3), "XScale": I(scale),
+                                                   "SeetheRate": I(0),
+                                                   "Center": I((0.5, 0.5), f"Point(0.5, 0.5 - time*{speed}*{v})")}, pos=(-330, y)),
+                  Tool(f"Umbral{i}", "BrightnessContrast", {"Input": I(link=f"Gotas{i}"), "Saturation": I(0),
+                                                             "Low": I(low, f"{low} + (1 - {h}.Cantidad)*0.06"), "High": I(1)}, pos=(-275, y)),
+                  Tool(f"Estela{i}", "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0), "XBlurSize": I(0.5),
+                                              "YBlurSize": I(yblur), "Input": I(link=f"Umbral{i}")}, pos=(-220, y)),
+                  Tool(f"Realce{i}", "BrightnessContrast", {"Input": I(link=f"Estela{i}"), "Gain": I(6)}, pos=(-165, y)),
+                  Tool(f"Viento{i}", "Transform", {"Input": I(link=f"Realce{i}"), "Angle": I(10, f"{h}.Viento"), "Size": I(1.4)},
+                       pos=(-110, y)),
+                  merge(f"Capa{i}", last, f"Viento{i}", (-110 + 55 * i, 0), "Screen", blend=blend, blend_expr=f"{h}.Brillo*{blend}")]
+        last = f"Capa{i}"
+    ucs = [uc("Cantidad", "Cantidad", 0.5, 0, 1), uc("Brillo", "Brillo de las gotas", 0.8, 0, 2), uc("Velocidad", "Velocidad", 1, 0, 5),
+           uc("Viento", "Inclinación por viento (grados)", 10, -45, 45), uc("Oscurecer", "Oscurecer la escena", 0.5, 0, 1)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Cantidad": I(0.5), "Brillo": I(0.8), "Velocidad": I(1),
+                                                "Viento": I(10), "Oscurecer": I(0.5)}, ucs, (110, 0)))
+    pubs = [pub(h, "Cantidad", "Cantidad", 0.5), pub(h, "Brillo", "Brillo de las gotas", 0.8), pub(h, "Velocidad", "Velocidad", 1),
+            pub(h, "Viento", "Inclinación por viento (grados)", 10), pub(h, "Oscurecer", "Oscurecer la escena", 0.5)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Clima_Nieve")
+def clima_nieve(name, anim):
+    """Nieve en tres capas de profundidad: copos pequenos y lentos al fondo, grandes y rapidos delante, con vaiven."""
+    h = "Nieve"
+    v = f"{h}.Velocidad"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0))]
+    last = "Entrada"
+    for i, (scale, low, blur, speed, blend, ph) in enumerate(((70, 0.88, 1, 0.0015, 0.5, 0), (35, 0.9, 2.5, 0.003, 0.7, 2),
+                                                             (18, 0.92, 5, 0.005, 0.8, 4)), 1):
+        y = -198 + 66 * (i - 1)
+        cx = f"0.5 + time*0.001*{h}.Viento*{v} + 0.01*sin(time*0.03*{v} + {ph})"
+        tools += [Tool(f"Copos{i}", "FastNoise", {**frame_format(), "Detail": I(8), "Contrast": I(2.5), "XScale": I(scale),
+                                                   "SeetheRate": I(0),
+                                                   "Center": I((0.5, 0.5), f"Point({cx}, 0.5 - time*{speed}*{v})")}, pos=(-330, y)),
+                  Tool(f"Umbral{i}", "BrightnessContrast", {"Input": I(link=f"Copos{i}"), "Saturation": I(0),
+                                                             "Low": I(low, f"{low} + (1 - {h}.Cantidad)*0.06"), "High": I(1)}, pos=(-275, y)),
+                  Tool(f"Suave{i}", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(blur), "Input": I(link=f"Umbral{i}")},
+                       pos=(-220, y)),
+                  merge(f"Capa{i}", last, f"Suave{i}", (-165 + 55 * i, 0), "Screen", blend=blend, blend_expr=f"{h}.Brillo*{blend}")]
+        last = f"Capa{i}"
+    ucs = [uc("Cantidad", "Cantidad", 0.5, 0, 1), uc("Brillo", "Brillo", 1, 0, 2), uc("Velocidad", "Velocidad", 1, 0, 5),
+           uc("Viento", "Viento (negativo = a la izquierda)", 0.5, -5, 5)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Cantidad": I(0.5), "Brillo": I(1), "Velocidad": I(1),
+                                                "Viento": I(0.5)}, ucs, (110, 0)))
+    pubs = [pub(h, "Cantidad", "Cantidad", 0.5), pub(h, "Brillo", "Brillo", 1), pub(h, "Velocidad", "Velocidad", 1),
+            pub(h, "Viento", "Viento (negativo = a la izquierda)", 0.5), pub("Suave3", "XBlurSize", "Desenfoque de copos cercanos", 5)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
 if __name__ == "__main__":
     for (cat, name), fn in BUILT.items():
         anim = "PRO" + name.split("_", 2)[-1].replace("_", "") + "Anim"

@@ -1,0 +1,194 @@
+{
+	Tools = ordered() {
+		PRO_TR_ZoomRadial = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "ZoomSaliente", Source = "Input", },
+				MainInput2 = InstanceInput { SourceOp = "ZoomEntrante", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Mezcla", Source = "Zoom", Name = "Zoom", Default = 0.6, },
+				Input2 = InstanceInput { SourceOp = "Mezcla", Source = "Fuerza", Name = "Desenfoque radial", Default = 1, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "RadialMedia6", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				ZoomSaliente = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Zoom*min(1, 2*Mezcla.Progreso)*min(1, 2*Mezcla.Progreso)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -33 } },
+				},
+				ZoomEntrante = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Zoom*(1 - max(0, 2*Mezcla.Progreso - 1))*(1 - max(0, 2*Mezcla.Progreso - 1))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 33 } },
+				},
+				Mezcla = Dissolve {
+					CtrlWShown = false,
+					Inputs = {
+						Mix = Input { Value = 0, Expression = "(max(0, min(1, (Mezcla.Progreso - 0.45)/0.1)))*(max(0, min(1, (Mezcla.Progreso - 0.45)/0.1)))*(3-2*(max(0, min(1, (Mezcla.Progreso - 0.45)/0.1))))", },
+						Background = Input { SourceOp = "ZoomSaliente", Source = "Output", },
+						Foreground = Input { SourceOp = "ZoomEntrante", Source = "Output", },
+						Progreso = Input { SourceOp = "PROZoomRadialAnim", Source = "Value", },
+						Zoom = Input { Value = 0.6, },
+						Fuerza = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Zoom = {
+							LINKS_Name = "Zoom",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.6,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+						Fuerza = {
+							LINKS_Name = "Desenfoque radial",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+				Radial1 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Fuerza*0.25*0.166667*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -77, -66 } },
+				},
+				RadialMedia1 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Mezcla", Source = "Output", },
+						Foreground = Input { SourceOp = "Radial1", Source = "Output", },
+						Blend = Input { Value = 0.5, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -77, 0 } },
+				},
+				Radial2 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Fuerza*0.25*0.333333*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -44, -66 } },
+				},
+				RadialMedia2 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RadialMedia1", Source = "Output", },
+						Foreground = Input { SourceOp = "Radial2", Source = "Output", },
+						Blend = Input { Value = 0.333333, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -44, 0 } },
+				},
+				Radial3 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Fuerza*0.25*0.5*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -11, -66 } },
+				},
+				RadialMedia3 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RadialMedia2", Source = "Output", },
+						Foreground = Input { SourceOp = "Radial3", Source = "Output", },
+						Blend = Input { Value = 0.25, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -11, 0 } },
+				},
+				Radial4 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Fuerza*0.25*0.666667*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 22, -66 } },
+				},
+				RadialMedia4 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RadialMedia3", Source = "Output", },
+						Foreground = Input { SourceOp = "Radial4", Source = "Output", },
+						Blend = Input { Value = 0.2, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 22, 0 } },
+				},
+				Radial5 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Fuerza*0.25*0.833333*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, -66 } },
+				},
+				RadialMedia5 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RadialMedia4", Source = "Output", },
+						Foreground = Input { SourceOp = "Radial5", Source = "Output", },
+						Blend = Input { Value = 0.166667, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, 0 } },
+				},
+				Radial6 = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Size = Input { Value = 1, Expression = "1 + Mezcla.Fuerza*0.25*1*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 88, -66 } },
+				},
+				RadialMedia6 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "RadialMedia5", Source = "Output", },
+						Foreground = Input { SourceOp = "Radial6", Source = "Output", },
+						Blend = Input { Value = 0.142857, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 88, 0 } },
+				},
+			},
+		},
+		PROZoomRadialAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_ZoomRadial"
+}

@@ -112,3 +112,21 @@ Incógnitas nuevas: acceso a `.X` y `.Y` de un punto en expresiones (Lente_Flare
 - [ ] 12.7 `Bokeh`: hay luces suaves que se mueven despacio. `Polvo_Flotante`: motas pequeñas que derivan.
 - [ ] 12.8 `Glow_Neon` sobre un plano con neones: halo de color alrededor de las luces.
 - [ ] 12.9 `Social_Tarjeta` en una timeline vertical: tarjeta redondeada con sombra, sin bordes cortados.
+
+## 13. Lote 8: texto social, transiciones, cámaras y clima
+- [ ] 13.1 Aparecen 18 piezas nuevas (el registro debe mostrar 440 plantillas).
+- [ ] 13.2 `Texto_Maquina`: la frase se escribe letra a letra desde el punto de inicio hacia la derecha y el cursor parpadea. *Si no sale nada, falla leer el texto de otro nodo (`Fuente.StyledText.Value`) o el texto por expresión (como en 12.1). Si una letra con tilde se ve rara durante un fotograma, es normal (Lua cuenta bytes, no letras).*
+- [ ] 13.3 `Texto_Resaltado`: la banda crece de izquierda a derecha detrás del texto, sin taparlo.
+- [ ] 13.4 `Texto_Brillo`: una franja brillante cruza el texto cada 60 fotogramas y solo se ve sobre las letras.
+- [ ] 13.5 `Texto_Neon`: parpadea al entrar y después falla de vez en cuando; tiene halo de color.
+- [ ] 13.6 `TR_ZoomRadial` y `TR_Giro`: sin huecos negros en los bordes. En `Giro`, el clip B termina derecho.
+- [ ] 13.7 `TR_Barras`: cada barra cubre toda la altura y entran una tras otra. *Si las barras son más cortas que la pantalla o no salen del todo, el alto de las máscaras no está en las unidades que supuse (igual que en 12.9): avísame.*
+- [ ] 13.8 `TR_Iris`: es un círculo, no un óvalo, y al final no quedan esquinas del clip A.
+- [ ] 13.9 `Cam_REC`: el punto rojo parpadea cada segundo, el código de tiempo avanza y las 4 esquinas tienen forma de L. *Si el código se queda en 00:00:00:00, falla `string.format` (como en 12.1).*
+- [ ] 13.10 `Cam_Seguridad`: el reloj avanza desde 14:30:00 y hay líneas horizontales finas.
+- [ ] 13.11 `Cam_Termica`: las zonas oscuras salen azules, las medias magenta y las claras amarillas. *Si sale blanco o saturado, falla el modo aditivo (como en 11.2).*
+- [ ] 13.12 `Cam_VisionNocturna` y `Retro_CRT` se ven bien en una timeline 4K.
+- [ ] 13.13 `PantallaDividida`: dos clips en dos pistas, uno con Fila 1 y otro con Fila 2, llenan la pantalla vertical sin huecos (salvo la separación).
+- [ ] 13.14 `KenBurns`: la imagen se acerca y se desplaza durante todo el clip sin mostrar bordes.
+- [ ] 13.15 `Luz_Rayos`: los rayos salen del punto de origen y se alargan alejándose de él.
+- [ ] 13.16 `Clima_Lluvia` y `Clima_Nieve`: las gotas y los copos **caen hacia abajo**. *Si suben, el sentido del centro de FastNoise está al revés: avísame y lo invierto en el script.*

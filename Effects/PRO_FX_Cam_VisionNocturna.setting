@@ -1,0 +1,163 @@
+{
+	Tools = ordered() {
+		PRO_FX_Cam_VisionNocturna = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Amplificar", Source = "Gain", Name = "Amplificación", Default = 1.6, },
+				Input2 = InstanceInput { SourceOp = "TonoColor", Source = "TopLeftRed", Name = "Color", ControlGroup = 2, Default = 0.25, },
+				Input3 = InstanceInput { SourceOp = "TonoColor", Source = "TopLeftGreen", ControlGroup = 2, Default = 1, },
+				Input4 = InstanceInput { SourceOp = "TonoColor", Source = "TopLeftBlue", ControlGroup = 2, Default = 0.3, },
+				Input5 = InstanceInput { SourceOp = "BlBloom", Source = "Blend", Name = "Brillo en las luces", Default = 0.4, },
+				Input6 = InstanceInput { SourceOp = "GrGrano", Source = "Blend", Name = "Grano", Default = 0.25, },
+				Input7 = InstanceInput { SourceOp = "Nocturna", Source = "Blend", Name = "Visor", Default = 1, },
+				Input8 = InstanceInput { SourceOp = "MascVisor", Source = "Width", Name = "Ancho del visor", Default = 0.9, },
+				Input9 = InstanceInput { SourceOp = "MascVisor", Source = "Height", Name = "Alto del visor", Default = 0.9, },
+				Input10 = InstanceInput { SourceOp = "MascVisor", Source = "SoftEdge", Name = "Suavidad del visor", Default = 0.12, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Nocturna", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 0 } },
+				},
+				Amplificar = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Saturation = Input { Value = 0, },
+						Gain = Input { Value = 1.6, },
+						Contrast = Input { Value = 0.1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, 0 } },
+				},
+				TonoColor = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0.25, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 0.3, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -66 } },
+				},
+				TonoDominante = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Amplificar", Source = "Output", },
+						Foreground = Input { SourceOp = "TonoColor", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						Blend = Input { Value = 1, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				BlAltas = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "TonoDominante", Source = "Output", },
+						Low = Input { Value = 0.6, },
+						High = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				BlHalo = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 30, },
+						Input = Input { SourceOp = "BlAltas", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -66 } },
+				},
+				BlBloom = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "TonoDominante", Source = "Output", },
+						Foreground = Input { SourceOp = "BlHalo", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.4, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, 0 } },
+				},
+				GrRuido = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 4, },
+						Contrast = Input { Value = 1.5, },
+						XScale = Input { Value = 60, },
+						SeetheRate = Input { Value = 1, },
+						Discontinuous = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, 66 } },
+				},
+				GrGrano = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "BlBloom", Source = "Output", },
+						Foreground = Input { SourceOp = "GrRuido", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Overlay" }, },
+						Blend = Input { Value = 0.25, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+				},
+				MascVisor = EllipseMask {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						OutputSize = Input { Value = FuID { "Custom" }, },
+						MaskWidth = Input { Value = 1920, },
+						MaskHeight = Input { Value = 1080, },
+						PixelAspect = Input { Value = { 1, 1 }, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Invert = Input { Value = 1, },
+						SoftEdge = Input { Value = 0.12, },
+						Width = Input { Value = 0.9, },
+						Height = Input { Value = 0.9, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, -99 } },
+				},
+				Negro = Background {
+					CtrlWShown = false,
+					Inputs = {
+						EffectMask = Input { SourceOp = "MascVisor", Source = "Mask", },
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0, },
+						TopLeftGreen = Input { Value = 0, },
+						TopLeftBlue = Input { Value = 0, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, -66 } },
+				},
+				Nocturna = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "GrGrano", Source = "Output", },
+						Foreground = Input { SourceOp = "Negro", Source = "Output", },
+						Blend = Input { Value = 1, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 0 } },
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Cam_VisionNocturna"
+}

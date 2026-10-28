@@ -1,0 +1,205 @@
+{
+	Tools = ordered() {
+		PRO_FX_Cam_Termica = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Frio", Source = "TopLeftRed", Name = "Color frío", ControlGroup = 1, Default = 0.05, },
+				Input2 = InstanceInput { SourceOp = "Frio", Source = "TopLeftGreen", ControlGroup = 1, Default = 0.05, },
+				Input3 = InstanceInput { SourceOp = "Frio", Source = "TopLeftBlue", ControlGroup = 1, Default = 0.45, },
+				Input4 = InstanceInput { SourceOp = "Medio", Source = "TopLeftRed", Name = "Color medio", ControlGroup = 4, Default = 0.9, },
+				Input5 = InstanceInput { SourceOp = "Medio", Source = "TopLeftGreen", ControlGroup = 4, Default = 0.1, },
+				Input6 = InstanceInput { SourceOp = "Medio", Source = "TopLeftBlue", ControlGroup = 4, Default = 0.5, },
+				Input7 = InstanceInput { SourceOp = "Caliente", Source = "TopLeftRed", Name = "Color caliente", ControlGroup = 7, Default = 1, },
+				Input8 = InstanceInput { SourceOp = "Caliente", Source = "TopLeftGreen", ControlGroup = 7, Default = 0.9, },
+				Input9 = InstanceInput { SourceOp = "Caliente", Source = "TopLeftBlue", ControlGroup = 7, Default = 0.2, },
+				Input10 = InstanceInput { SourceOp = "Luma", Source = "Contrast", Name = "Contraste", Default = 0.2, },
+				Input11 = InstanceInput { SourceOp = "Suave", Source = "XBlurSize", Name = "Suavidad", Default = 3, },
+				Input12 = InstanceInput { SourceOp = "Termica", Source = "Blend", Name = "Mezcla con el original", Default = 1, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Termica", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 0 } },
+				},
+				Luma = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Saturation = Input { Value = 0, },
+						Contrast = Input { Value = 0.2, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, -66 } },
+				},
+				Suave = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 3, },
+						Input = Input { SourceOp = "Luma", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -66 } },
+				},
+				Bajo = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Suave", Source = "Output", },
+						Low = Input { Value = 0, },
+						High = Input { Value = 0.5, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -132 } },
+				},
+				Alto = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Suave", Source = "Output", },
+						Low = Input { Value = 0.5, },
+						High = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				Blanco = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -198 } },
+				},
+				PesoFrio = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Blanco", Source = "Output", },
+						Foreground = Input { SourceOp = "Bajo", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Difference" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -198 } },
+				},
+				PesoMedio = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Bajo", Source = "Output", },
+						Foreground = Input { SourceOp = "Alto", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Difference" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -132 } },
+				},
+				Frio = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0.05, },
+						TopLeftGreen = Input { Value = 0.05, },
+						TopLeftBlue = Input { Value = 0.45, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -231 } },
+				},
+				Medio = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0.9, },
+						TopLeftGreen = Input { Value = 0.1, },
+						TopLeftBlue = Input { Value = 0.5, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -165 } },
+				},
+				Caliente = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 1, },
+						TopLeftGreen = Input { Value = 0.9, },
+						TopLeftBlue = Input { Value = 0.2, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -33 } },
+				},
+				ParteFrio = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "PesoFrio", Source = "Output", },
+						Foreground = Input { SourceOp = "Frio", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -198 } },
+				},
+				ParteMedio = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "PesoMedio", Source = "Output", },
+						Foreground = Input { SourceOp = "Medio", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -132 } },
+				},
+				ParteCaliente = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Alto", Source = "Output", },
+						Foreground = Input { SourceOp = "Caliente", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, -66 } },
+				},
+				Suma1 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ParteFrio", Source = "Output", },
+						Foreground = Input { SourceOp = "ParteMedio", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+						SubtractiveAdditive = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, -165 } },
+				},
+				Suma2 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Suma1", Source = "Output", },
+						Foreground = Input { SourceOp = "ParteCaliente", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+						SubtractiveAdditive = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, -99 } },
+				},
+				Termica = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "Suma2", Source = "Output", },
+						Blend = Input { Value = 1, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, 0 } },
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Cam_Termica"
+}

@@ -2,15 +2,15 @@
 
 Paquete de recursos para DaVinci Resolve 20/21 **Studio** en Windows: transiciones, títulos, efectos y generadores de Fusion, más LUTs y DCTL de color. Todo lleva el prefijo `PRO_` y se agrupa en **PRO Pack** dentro de cada categoría de la Effects Library.
 
-> **Estado:** las 51 plantillas cargan en Resolve 20.3 (comprobado en su registro: 422 plantillas en total, sin errores) y pasan el validador automático. El **aspecto visual** de cada pieza está sin revisar: hazlo con [CHECKLIST_PRUEBAS.md](CHECKLIST_PRUEBAS.md).
+> **Estado:** las 51 plantillas de los lotes 1 a 7 cargan en Resolve 20.3 (comprobado en su registro: 422 plantillas en total, sin errores). Las 18 del lote 8 pasan el validador pero aún no se han abierto en Resolve. El **aspecto visual** de cada pieza está sin revisar: hazlo con [CHECKLIST_PRUEBAS.md](CHECKLIST_PRUEBAS.md).
 
 ## Contenido
 
 | Categoría | Cantidad | Ejemplos |
 |---|---|---|
-| Transiciones | 11 | Blur dissolve, zoom punch, whip pan, light leak, film burn, glitch, salto de cinta, tira de película, quemado orgánico, empuje |
-| Títulos y gráficos | 12 | Lower third, contador, barra de progreso, callout, end screen, suscríbete, cita, título de apertura, línea de tiempo, anillo giratorio |
-| Efectos | 24 | Grano + halation, película completa (estilo Dehancer), proyector, lentes (anamórfico, vintage, lomo, flare), VHS, shake, punch-in, letterbox, glow neón, duotono, halftone, sombra larga, animación de entrada/salida |
+| Transiciones | 15 | Blur dissolve, zoom punch, zoom radial, whip pan, giro, barras, iris, light leak, film burn, glitch, salto de cinta, tira de película, quemado orgánico, empuje |
+| Títulos y gráficos | 16 | Lower third, contador, barra de progreso, callout, end screen, suscríbete, cita, título de apertura, línea de tiempo, anillo giratorio, máquina de escribir, resaltador, texto con destello, neón |
+| Efectos | 34 | Grano + halation, película completa (estilo Dehancer), proyector, lentes (anamórfico, vintage, lomo, flare), VHS, CRT, shake, punch-in, Ken Burns, letterbox, glow neón, duotono, halftone, sombra larga, animación de entrada/salida, pantalla dividida, cámaras (REC, seguridad, visión nocturna, térmica), rayos de luz, lluvia, nieve |
 | Generadores | 4 | Fondo con luz, cuadrícula, degradado animado, bokeh |
 | LUTs (.cube) | 5 | Teal & Orange, Frío Thriller, Film Suave, Película Print, B/N Contraste |
 | DCTL (Studio) | 1 | Teal & Orange con deslizadores |
@@ -68,7 +68,7 @@ Los looks (`.cube` y `.dctl`) esperan una imagen **Rec.709 Gamma 2.4**. Con mate
 
 ## Para desarrollar
 
-Las plantillas de los lotes 2 a 7 se generan con un script. Edita `tools/build_templates.py` (no los `.setting`) y regenera:
+Las plantillas de los lotes 2 a 8 se generan con un script. Edita `tools/build_templates.py` (no los `.setting`) y regenera:
 
 ```powershell
 python tools\build_templates.py   # regenera las plantillas generadas
