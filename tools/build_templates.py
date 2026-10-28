@@ -2044,6 +2044,435 @@ def clima_nieve(name, anim):
     return macro(name, [("Entrada", "Input")], pubs, h, tools)
 
 
+# ======================================================================= LOTE 9: estilos de texto con su fuente
+# Elementos de sombreado de Text+ (nombres copiados de las plantillas oficiales de Resolve 20):
+# 1 = relleno, 2 = contorno, 4 = sombra dura, 6 = caja por linea, 8 = sombra suave.
+def shade(outline=None, hard=None, soft=None, box=None):
+    d = {}
+
+    def rgb(n, c):
+        d.update({f"Red{n}": I(c[0]), f"Green{n}": I(c[1]), f"Blue{n}": I(c[2])})
+    if outline:
+        d.update({"Enabled2": I(1), "Thickness2": I(outline[1]), "OutsideOnly2": I(1)})
+        rgb(2, outline[0])
+    if hard:
+        d.update({"Enabled4": I(1), "ElementShape4": I(0), "Offset4": I(hard[1])})
+        rgb(4, hard[0])
+    if box:
+        d.update({"Enabled6": I(1), "ElementShape6": I(2), "Level6": I(1), "ExtendHorizontal6": I(box[1]),
+                  "ExtendVertical6": I(box[2]), "Round6": I(box[3])})
+        rgb(6, box[0])
+    if soft:
+        d.update({"Enabled8": I(1), "Softness8": I(1), "SoftnessX8": I(soft[2]), "SoftnessY8": I(soft[2]), "Offset8": I(soft[1])})
+        rgb(8, soft[0])
+    return d
+
+
+def styled(name, text, font, style, size, pos, rgb=(1, 1, 1), center=(0.5, 0.5), left=False, spacing=None, **shading):
+    extra = shade(**shading)
+    if spacing is not None:
+        extra["CharacterSpacing"] = I(spacing) if not isinstance(spacing, str) else I(1, spacing)
+    return text_tool(name, text, size, center, pos, rgb, font, style, left, extra)
+
+
+def mover(name, src, pos, cx="0.5", cy="0.5", size="1", angle=None):
+    inputs = {"Input": I(link=src), "Center": I((0.5, 0.5), f"Point({cx}, {cy})"), "Size": I(1, size)}
+    if angle:
+        inputs["Angle"] = I(0, angle)
+    return Tool(name, "Transform", inputs, pos=pos)
+
+
+def phase(h, a, b):
+    """Avance suave (0..1) de una fase de la entrada, sin la salida."""
+    return smooth(clamp01(f"({h}.U - {a:g})/{b - a:g}"))
+
+
+def pop(h, a, b):
+    return ease_back(clamp01(f"({h}.U - {a:g})/{b - a:g}"), h)
+
+
+def style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.0, dy_v=0.0, size_v=1.0):
+    """Como title(), con un Transform 'Formato' que recoloca y escala el bloque si se marca 'Formato vertical (9:16)'."""
+    v = f"{h}.Vertical"
+    ucs = ucs[:-2] + [uc("Vertical", "Formato vertical (9:16)", 0, 0, 1, checkbox=True)] + ucs[-2:]
+    inputs = {**inputs, "Vertical": I(0)}
+    tools = [solid("Lienzo", (0, 0, 0), (-440, 0), alpha=0)] + body
+    t, last = compose(layers, x0=110)
+    tools += t
+    tools.append(Tool("Formato", "Transform", {"Input": I(link=last),
+                                               "Center": I((0.5, 0.5 + dy_h), f"Point(0.5, 0.5 + iif({v} > 0.5, {dy_v:g}, {dy_h:g}))"),
+                                               "Size": I(1, f"iif({v} > 0.5, {size_v:g}, 1)")}, pos=(385, 0)))
+    tools.append(Tool(h, "Transform", {"Input": I(link="Formato"), **inputs}, ucs, (440, 0)))
+    entrada = float(inputs["Entrada"].split("Value = ")[1].split(",")[0])
+    salida = float(inputs["Salida"].split("Value = ")[1].split(",")[0])
+    pubs = numbered(pubs + [pub(h, "Vertical", "Formato vertical (9:16)", 0), pub(h, "Center", "Posición"), pub(h, "Size", "Escala", 1),
+                            pub(h, "Entrada", "Duración entrada (% del clip)", entrada),
+                            pub(h, "Salida", "Duración salida (% del clip, 0 = sin salida)", salida)])
+    a = "PRO" + name.split("_", 2)[-1].replace("_", "") + "Anim"
+    return macro(name, [], pubs, h, tools, a).replace('"PRO_ANIM"', f'"{a}"')
+
+
+def outline_pubs(tool, key, rgb, thickness):
+    return [pub_color(tool, "Color del contorno", rgb, f"o{key}", prefix="", suffix="2"),
+            pub(tool, "Thickness2", "Grosor del contorno", thickness)]
+
+
+@register("Titles", "PRO_TTL_Estilo_Viral")
+def estilo_viral(name, anim_):
+    """Subtitulo de reels/TikTok: Montserrat Black en mayusculas, contorno negro grueso, sombra y palabra clave en amarillo."""
+    h = "Viral"
+    ucs, inputs = kit(h, 0.12, 0.08, [uc("Rebote", "Rebote", 1.4, 0, 3)], {"Rebote": I(1.4)})
+    sh = dict(outline=((0, 0, 0), 0.07), soft=((0, 0, 0), (0.004, -0.01), 4))
+    body = [styled("Linea1", "ESTO LO CAMBIA", "Montserrat", "Black", 0.075, (-385, -132), **sh),
+            styled("Linea2", "TODO", "Montserrat", "Black", 0.1, (-330, -132), rgb=(1, 0.85, 0.1), **sh),
+            mover("Anim1", "Linea1", (-385, -66), cy="0.54", size=f"max(0, {pop(h, 0, 0.55)})"),
+            mover("Anim2", "Linea2", (-330, -66), cy="0.44", size=f"max(0, {pop(h, 0.35, 1)})")]
+    pubs = [pub("Linea1", "StyledText", "Línea 1"), pub("Linea2", "StyledText", "Palabra clave"),
+            *text_pubs("Linea1", "", 0.075, (1, 1, 1), 1),
+            pub_color("Linea2", "Color de la palabra clave", (1, 0.85, 0.1), "c2", prefix="", suffix="1"),
+            pub("Linea2", "Font", "Fuente de la palabra clave", group="f2"), pub("Linea2", "Style", group="f2"),
+            *outline_pubs("Linea1", 1, (0, 0, 0), 0.07), pub(h, "Rebote", "Rebote", 1.4)]
+    # la palabra clave copia el contorno de la linea 1
+    body[1].inputs.update({ch: I(0, f"Linea1.{ch}") for ch in ("Red2", "Green2", "Blue2", "Thickness2")})
+    layers = [("Anim1", stage(h, 0, 0.25)), ("Anim2", stage(h, 0.35, 0.6))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=-0.28, dy_v=-0.14, size_v=1.1)
+
+
+@register("Titles", "PRO_TTL_Estilo_Gancho")
+def estilo_gancho(name, anim_):
+    """Gancho de los primeros segundos (YouTube/Shorts): Anton amarillo con sombra dura, cae de golpe y tiembla al aterrizar."""
+    h = "Gancho"
+    land = clamp01(f"{h}.U/0.6")
+    k = clamp01(f"({h}.Progreso - {h}.Entrada*0.6)/0.06")
+    shake = f"{h}.Temblor*0.012*(1 - {k})*iif({h}.U >= 0.6, 1, 0)"
+    ucs, inputs = kit(h, 0.15, 0.08, [uc("Golpe", "Fuerza del golpe", 2, 0, 5), uc("Temblor", "Temblor al aterrizar", 1, 0, 5),
+                                      uc("Inclinacion", "Inclinación (grados)", -4, -20, 20)],
+                      {"Golpe": I(2), "Temblor": I(1), "Inclinacion": I(-4)})
+    body = [styled("Titular", "NO HAGAS ESTO", "Anton", "Regular", 0.12, (-385, -132), rgb=(1, 0.86, 0),
+                   outline=((0, 0, 0), 0.03), hard=((0, 0, 0), (0.01, -0.014))),
+            styled("Apoyo", "(MIRA HASTA EL FINAL)", "Montserrat", "ExtraBold", 0.035, (-330, -132), outline=((0, 0, 0), 0.06)),
+            mover("Anim1", "Titular", (-385, -66), cx=f"0.5 + {shake}*sin(time*2.9)", cy=f"0.54 + {shake}*sin(time*3.7 + 1)",
+                 size=f"1 + {h}.Golpe*(1 - {land})*(1 - {land})", angle=f"{h}.Inclinacion"),
+            mover("Anim2", "Apoyo", (-330, -66), cy=f"0.42 - 0.02*(1 - {phase(h, 0.6, 1)})")]
+    pubs = [pub("Titular", "StyledText", "Titular"), pub("Apoyo", "StyledText", "Texto de apoyo"),
+            *text_pubs("Titular", " del titular", 0.12, (1, 0.86, 0), 1), pub_color("Titular", "Color de la sombra", (0, 0, 0), "s1", prefix="", suffix="4"),
+            pub("Titular", "Offset4", "Desplazamiento de la sombra"), *text_pubs("Apoyo", " del apoyo", 0.035, (1, 1, 1), 2),
+            pub(h, "Golpe", "Fuerza del golpe", 2), pub(h, "Temblor", "Temblor al aterrizar", 1), pub(h, "Inclinacion", "Inclinación (grados)", -4)]
+    layers = [("Anim1", f"min(1, 4*{h}.U)*{h}.Xs"), ("Anim2", stage(h, 0.6, 1))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.05, dy_v=0.12, size_v=0.9)
+
+
+@register("Titles", "PRO_TTL_Estilo_Trailer")
+def estilo_trailer(name, anim_):
+    """Trailer de cine: Bebas Neue con letras que se separan lentamente durante todo el clip y aparecen desenfocadas."""
+    h = "Trailer"
+    s = phase(h, 0, 1)
+    ucs, inputs = kit(h, 0.3, 0.2, [uc("Expansion", "Separación de letras durante el clip", 0.15, 0, 1)], {"Expansion": I(0.15)})
+    body = [styled("Titulo", "EL ÚLTIMO VIAJE", "Bebas Neue", "Regular", 0.13, (-385, -132), spacing=f"1 + {h}.Expansion*{h}.Progreso"),
+            styled("Sub", "PRÓXIMAMENTE", "Montserrat", "Light", 0.025, (-330, -132), rgb=(0.8, 0.8, 0.8), spacing=2.2),
+            Tool("Enfoque", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, f"25*(1 - {s})"), "Input": I(link="Titulo")},
+                 pos=(-385, -99)),
+            mover("Anim1", "Enfoque", (-385, -66), cy="0.53", size=f"1.06 - 0.06*{s}"),
+            mover("Anim2", "Sub", (-330, -66), cy="0.41")]
+    pubs = [pub("Titulo", "StyledText", "Título"), pub("Sub", "StyledText", "Subtítulo"),
+            *text_pubs("Titulo", " del título", 0.13, (1, 1, 1), 1), *text_pubs("Sub", " del subtítulo", 0.025, (0.8, 0.8, 0.8), 2),
+            pub(h, "Expansion", "Separación de letras durante el clip", 0.15)]
+    layers = [("Anim1", stage(h, 0, 1)), ("Anim2", stage(h, 0.5, 1))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=0.8)
+
+
+@register("Titles", "PRO_TTL_Estilo_Elegante")
+def estilo_elegante(name, anim_):
+    """Bodas y lifestyle: nombres en Segoe Script con fecha en Montserrat Light espaciada y una linea fina."""
+    h = "Elegante"
+    s1, s2 = phase(h, 0, 0.7), phase(h, 0.4, 1)
+    ucs, inputs = kit(h, 0.35, 0.2)
+    cream = (1, 0.95, 0.88)
+    body = [styled("Nombres", "Ana & Luis", "Segoe Script", "Regular", 0.1, (-385, -132), rgb=cream,
+                   soft=((0, 0, 0), (0.003, -0.006), 3)),
+            styled("Fecha", "28 · OCTUBRE · 2026", "Montserrat", "Light", 0.025, (-330, -132), rgb=cream, spacing=1.8),
+            Tool("Desenfoque", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, f"10*(1 - {s1})"), "Input": I(link="Nombres")},
+                 pos=(-385, -99)),
+            mover("Anim1", "Desenfoque", (-385, -66), cy=f"0.55 - 0.03*(1 - {s1})"),
+            mover("Anim2", "Fecha", (-330, -66), cy=f"0.405 - 0.02*(1 - {s2})"),
+            rect("MascLinea", (-275, -165), Center=I((0.5, 0.457)), Width=I(0, f"0.18*{s2}"), Height=I(0.0012)),
+            solid("Linea", cream, (-275, -132), alpha=0.7, mask="MascLinea")]
+    for ch in ("Red", "Green", "Blue"):
+        body[1].inputs[f"{ch}1"] = I(1, f"Nombres.{ch}1")
+        body[-1].inputs[f"TopLeft{ch}"] = I(1, f"Nombres.{ch}1")
+    pubs = [pub("Nombres", "StyledText", "Nombres"), pub("Fecha", "StyledText", "Fecha"),
+            *text_pubs("Nombres", " de los nombres", 0.1, cream, 1), pub("Fecha", "Font", "Fuente de la fecha", group="f2"),
+            pub("Fecha", "Style", group="f2"), pub("Fecha", "Size", "Tamaño de la fecha", 0.025)]
+    layers = [("Anim1", stage(h, 0, 0.7)), ("Linea", f"{h}.Xs"), ("Anim2", stage(h, 0.4, 1))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05, size_v=0.95)
+
+
+@register("Titles", "PRO_TTL_Estilo_Minimal")
+def estilo_minimal(name, anim_):
+    """Vlog y corporativo limpio: Poppins SemiBold + Poppins Light; sube, aparece y aprieta el espaciado."""
+    h = "Minimal"
+    s1, s2 = phase(h, 0, 0.7), phase(h, 0.3, 1)
+    ucs, inputs = kit(h, 0.25, 0.15)
+    body = [styled("Titulo", "Título limpio", "Poppins", "SemiBold", 0.065, (-385, -132), spacing=f"1 + 0.25*(1 - {s1})"),
+            styled("Sub", "Subtítulo o descripción breve", "Poppins", "Light", 0.03, (-330, -132), rgb=(0.85, 0.85, 0.85)),
+            mover("Anim1", "Titulo", (-385, -66), cy=f"0.53 - 0.04*(1 - {s1})"),
+            mover("Anim2", "Sub", (-330, -66), cy=f"0.455 - 0.03*(1 - {s2})")]
+    pubs = [pub("Titulo", "StyledText", "Título"), pub("Sub", "StyledText", "Subtítulo"),
+            *text_pubs("Titulo", " del título", 0.065, (1, 1, 1), 1), *text_pubs("Sub", " del subtítulo", 0.03, (0.85, 0.85, 0.85), 2)]
+    layers = [("Anim1", stage(h, 0, 0.7)), ("Anim2", stage(h, 0.3, 1))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=0.85)
+
+
+@register("Titles", "PRO_TTL_Estilo_Documental")
+def estilo_documental(name, anim_):
+    """Documental / video ensayo: Roboto Condensed en caja negra y lugar o fecha en caja blanca, abajo a la izquierda."""
+    h = "Documental"
+    s1, s2 = phase(h, 0, 0.6), phase(h, 0.35, 1)
+    ucs, inputs = kit(h, 0.2, 0.12)
+    body = [styled("Titulo", "TÍTULO DEL REPORTAJE", "Roboto Condensed", "Bold", 0.042, (-385, -132), center=(0.08, 0.2), left=True,
+                   box=((0.05, 0.05, 0.05), 0.015, 0.012, 0)),
+            styled("Dato", "Ciudad de México · 1985", "Roboto", "Regular", 0.026, (-330, -132), rgb=(0.1, 0.1, 0.1), center=(0.08, 0.135),
+                   left=True, box=((0.95, 0.95, 0.95), 0.012, 0.008, 0)),
+            mover("Anim1", "Titulo", (-385, -66), cx=f"0.5 - 0.3*(1 - {s1})"),
+            mover("Anim2", "Dato", (-330, -66), cx=f"0.5 - 0.3*(1 - {s2})")]
+    pubs = [pub("Titulo", "StyledText", "Título"), pub("Dato", "StyledText", "Lugar o fecha"),
+            *text_pubs("Titulo", " del título", 0.042, (1, 1, 1), 1),
+            pub_color("Titulo", "Color de la caja del título", (0.05, 0.05, 0.05), "b1", prefix="", suffix="6"),
+            *text_pubs("Dato", " del dato", 0.026, (0.1, 0.1, 0.1), 2),
+            pub_color("Dato", "Color de la caja del dato", (0.95, 0.95, 0.95), "b2", prefix="", suffix="6")]
+    layers = [("Anim1", stage(h, 0, 0.6)), ("Anim2", stage(h, 0.35, 1))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.15)
+
+
+@register("Titles", "PRO_TTL_Estilo_Deportivo")
+def estilo_deportivo(name, anim_):
+    """Deportes y gaming competitivo: Teko condensada con sombra dura y barra inclinada de color; entra rapido con desenfoque."""
+    h = "Deportivo"
+    e1, e2, eb = phase(h, 0.2, 0.7), phase(h, 0.45, 1), phase(h, 0, 0.5)
+    ucs, inputs = kit(h, 0.2, 0.1)
+    accent = (0.9, 0.1, 0.15)
+    body = [rect("MascBarra", (-440, -165), Center=I((0.3, 0.2), f"Point(0.06 + 0.25*{eb}, 0.205)"), Width=I(0.5, f"0.5*{eb}"),
+                 Height=I(0.085), Angle=I(6)),
+            solid("Barra", accent, (-440, -132), mask="MascBarra"),
+            styled("Nombre", "APELLIDO", "Teko", "SemiBold", 0.11, (-385, -132), center=(0.08, 0.2), left=True,
+                   hard=((0, 0, 0), (0.006, -0.01))),
+            styled("Dato", "DELANTERO · 25 GOLES", "Teko", "Regular", 0.045, (-330, -132), rgb=accent, center=(0.08, 0.125), left=True),
+            Tool("Rafaga1", "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0), "XBlurSize": I(0, f"40*(1 - {e1})"), "YBlurSize": I(0),
+                                     "Input": I(link="Nombre")}, pos=(-385, -99)),
+            Tool("Rafaga2", "Blur", {"Filter": I(FuID("Fast Gaussian")), "LockXY": I(0), "XBlurSize": I(0, f"40*(1 - {e2})"), "YBlurSize": I(0),
+                                     "Input": I(link="Dato")}, pos=(-330, -99)),
+            mover("Anim1", "Rafaga1", (-385, -66), cx=f"0.5 - 0.6*(1 - {e1})"),
+            mover("Anim2", "Rafaga2", (-330, -66), cx=f"0.5 - 0.6*(1 - {e2})")]
+    body[3].inputs.update({f"{ch}1": I(1, f"Barra.TopLeft{ch}") for ch in ("Red", "Green", "Blue")})
+    pubs = [pub("Nombre", "StyledText", "Nombre"), pub("Dato", "StyledText", "Dato"),
+            *text_pubs("Nombre", " del nombre", 0.11, (1, 1, 1), 1), pub_color("Barra", "Color del equipo", accent, "c2"),
+            pub("Dato", "Font", "Fuente del dato", group="f3"), pub("Dato", "Style", group="f3"), pub("Dato", "Size", "Tamaño del dato", 0.045)]
+    layers = [("Barra", f"{h}.Xs"), ("Anim1", stage(h, 0.2, 0.5)), ("Anim2", stage(h, 0.45, 0.8))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.15)
+
+
+@register("Titles", "PRO_TTL_Estilo_Retro80")
+def estilo_retro80(name, anim_):
+    """Synthwave de los 80: Monoton rosa con sombra cian desplazada y halo; se enciende parpadeando."""
+    h = "Retro"
+    on = f"iif({h}.U < 1, iif(sin(time*2.3)*sin(time*0.9 + 1) > 0, 1, 0.15), 1)"
+    ucs, inputs = kit(h, 0.25, 0.1, [uc("Glow", "Brillo del halo", 0.8, 0, 1), uc("F", "Encendido interno", 1, 0, 1, clamp=False)],
+                      {"Glow": I(0.8), "F": I(1, on)})
+    body = [styled("Titulo", "NEON NIGHTS", "Monoton", "Regular", 0.1, (-385, -132), rgb=(1, 0.2, 0.8), hard=((0, 0.9, 1), (0.006, -0.009))),
+            styled("Sub", "SYNTHWAVE · 1986", "Montserrat", "Bold", 0.03, (-330, -132), rgb=(0, 0.9, 1), spacing=1.8),
+            mover("Anim1", "Titulo", (-385, -66), cy="0.53"),
+            Tool("Halo", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(30), "Input": I(link="Anim1")}, pos=(-385, -33)),
+            mover("Anim2", "Sub", (-330, -66), cy=f"0.42 - 0.02*(1 - {phase(h, 0.5, 1)})")]
+    pubs = [pub("Titulo", "StyledText", "Título"), pub("Sub", "StyledText", "Subtítulo"),
+            *text_pubs("Titulo", " del título", 0.1, (1, 0.2, 0.8), 1), pub_color("Titulo", "Color de la sombra", (0, 0.9, 1), "s1", prefix="", suffix="4"),
+            pub("Titulo", "Offset4", "Desplazamiento de la sombra"), pub(h, "Glow", "Brillo del halo", 0.8),
+            pub_color("Sub", "Color del subtítulo", (0, 0.9, 1), "c2", prefix="", suffix="1")]
+    layers = [("Halo", f"{h}.Glow*{h}.F*{h}.Xs"), ("Anim1", f"(0.3 + 0.7*{h}.F)*{h}.Xs"), ("Anim2", stage(h, 0.5, 1))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=0.8)
+
+
+@register("Titles", "PRO_TTL_Estilo_Gamer")
+def estilo_gamer(name, anim_):
+    """Videojuego retro: Press Start 2P con sombra de pixel, aparece a saltos y 'PRESS START' parpadea."""
+    h = "Gamer"
+    s = clamp01(f"{h}.U/0.6")
+    ucs, inputs = kit(h, 0.2, 0.05)
+    body = [styled("Titulo", "NIVEL 1", "Press Start 2P", "Regular", 0.06, (-385, -132), rgb=(0.3, 1, 0.35), hard=((0, 0, 0), (0.005, -0.008))),
+            styled("Sub", "PRESS START", "Press Start 2P", "Regular", 0.025, (-330, -132), hard=((0, 0, 0), (0.003, -0.005))),
+            mover("Anim1", "Titulo", (-385, -66), cy="0.54", size=f"floor(4*{s} + 0.0001)/4"),
+            mover("Anim2", "Sub", (-330, -66), cy="0.43")]
+    pubs = [pub("Titulo", "StyledText", "Título"), pub("Sub", "StyledText", "Texto que parpadea"),
+            *text_pubs("Titulo", " del título", 0.06, (0.3, 1, 0.35), 1), *text_pubs("Sub", " del parpadeo", 0.025, (1, 1, 1), 2)]
+    layers = [("Anim1", f"{h}.Xs*iif({h}.U > 0, 1, 0)"), ("Anim2", f"{h}.Xs*iif({h}.U >= 1, 1, 0)*iif(sin(time*0.3) > 0, 1, 0)")]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, size_v=1.2)
+
+
+@register("Titles", "PRO_TTL_Estilo_Nota")
+def estilo_nota(name, anim_):
+    """Estilo UGC / nota a mano: Ink Free con subrayado de rotulador que se dibuja y un vaiven suave."""
+    h = "Nota"
+    g = phase(h, 0.3, 1)
+    ucs, inputs = kit(h, 0.3, 0.12, [uc("Ancho", "Ancho del subrayado", 0.36, 0.02, 1), uc("Vaiven", "Vaivén", 1, 0, 5)],
+                      {"Ancho": I(0.36), "Vaiven": I(1)})
+    body = [styled("Texto", "nota rápida :)", "Ink Free", "Regular", 0.075, (-385, -132), soft=((0, 0, 0), (0.003, -0.005), 3)),
+            mover("Anim1", "Texto", (-385, -66), cy=f"0.52 - 0.02*(1 - {phase(h, 0, 0.5)})", angle=f"{h}.Vaiven*1.5*sin(time*0.12)"),
+            rect("MascRaya", (-330, -165), Center=I((0.32, 0.455), f"Point(0.5 - {h}.Ancho/2 + {h}.Ancho*{g}/2, 0.455)"),
+                 Width=I(0, f"{h}.Ancho*{g}"), Height=I(0.01), Angle=I(-2), CornerRadius=I(0.5)),
+            solid("Raya", (1, 0.85, 0.1), (-330, -132), alpha=0.85, mask="MascRaya")]
+    pubs = [pub("Texto", "StyledText", "Texto"), *text_pubs("Texto", "", 0.075, (1, 1, 1), 1),
+            pub_color("Raya", "Color del subrayado", (1, 0.85, 0.1), "c2"), pub(h, "Ancho", "Ancho del subrayado", 0.36),
+            pub(h, "Vaiven", "Vaivén", 1)]
+    layers = [("Raya", f"{h}.Xs"), ("Anim1", stage(h, 0, 0.5))]
+    return style_title(name, h, ucs, inputs, body, layers, pubs, dy_v=0.05)
+
+
+# ----------------------------------------------------------------------- efectos para horizontal y vertical
+@register("Effects", "PRO_FX_Din_Eco")
+def din_eco(name, anim):
+    """Eco o estela (velocity edits): copias retrasadas del propio clip que se desvanecen detras del movimiento."""
+    h = "Eco"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0))]
+    last = "Entrada"
+    for k in range(1, 5):
+        tools += [Tool(f"Retraso{k}", "TimeSpeed", {"Input": I(link="Entrada"), "Speed": I(1), "Delay": I(2 * k, f"{k}*{h}.Separacion")},
+                       pos=(-385 + 55 * k, -66)),
+                  merge(f"Copia{k}", last, f"Retraso{k}", (-385 + 55 * k, 0), blend=0.5,
+                        blend_expr=f"{h}.Intensidad*pow({h}.Decaimiento, {k})")]
+        last = f"Copia{k}"
+    tools.append(merge("Frente", last, "Entrada", (-55, 0), blend=1, blend_expr=f"1 - {h}.Fantasma"))
+    ucs = [uc("Separacion", "Separación (fotogramas)", 2, 1, 15), uc("Intensidad", "Intensidad", 0.8, 0, 1),
+           uc("Decaimiento", "Decaimiento", 0.6, 0.1, 1), uc("Fantasma", "Original transparente", 0, 0, 1)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Frente"), "Separacion": I(2), "Intensidad": I(0.8), "Decaimiento": I(0.6),
+                                                "Fantasma": I(0)}, ucs, (0, 0)))
+    pubs = [pub(h, "Separacion", "Separación (fotogramas)", 2), pub(h, "Intensidad", "Intensidad", 0.8),
+            pub(h, "Decaimiento", "Decaimiento", 0.6), pub(h, "Fantasma", "Original transparente", 0)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Din_DesenfoqueMovimiento")
+def din_desenfoque_movimiento(name, anim):
+    """Desenfoque de movimiento direccional (DirectionalBlur) con pico opcional al inicio, para cortes de velocidad."""
+    h = "Movimiento"
+    pico = f"(1 - {h}.Pico + {h}.Pico*(1 - {smooth(clamp01(f'{h}.Progreso/max({h}.Duracion, 0.0001)'))}))"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Intensidad", "Intensidad", 0.1, 0, 1),
+           uc("Pico", "Solo al inicio (1 = se apaga)", 0, 0, 1), uc("Duracion", "Duración del pico (% del clip)", 0.2, 0.01, 1)]
+    tools = [Tool(h, "DirectionalBlur", {"Length": I(0.1, f"{h}.Intensidad*{pico}"), "Angle": I(0), "ClippingMode": I(FuID("None")),
+                                         "Progreso": I(link=anim, out="Value"), "Intensidad": I(0.1), "Pico": I(0), "Duracion": I(0.2)},
+                  ucs, (0, 0))]
+    pubs = [pub(h, "Intensidad", "Intensidad", 0.1), pub(h, "Angle", "Ángulo (grados)", 0),
+            pub(h, "Pico", "Solo al inicio (1 = se apaga)", 0), pub(h, "Duracion", "Duración del pico (% del clip)", 0.2)]
+    return macro(name, [(h, "Input")], pubs, h, tools, anim)
+
+
+@register("Effects", "PRO_FX_Social_Reencuadre")
+def social_reencuadre(name, anim):
+    """Clip horizontal en timeline vertical (o al reves) con fondo del mismo clip ampliado y desenfocado en lugar de barras negras."""
+    h = "Reencuadre"
+    ac, at = f"{h}.AspClip", f"{h}.AspTL"
+    wide = f"{ac} > {at}"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-330, 0)),
+             Tool("Ampliar", "Transform", {"Input": I(link="Entrada"),
+                                           "Size": I(3.2, f"max({ac}/{at}, {at}/{ac})*{h}.ZoomFondo")}, pos=(-275, -66)),
+             Tool("Difuminar", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(40), "Input": I(link="Ampliar")}, pos=(-220, -66)),
+             Tool("Fondo", "BrightnessContrast", {"Input": I(link="Difuminar"), "Gain": I(0.7), "Saturation": I(1.1)}, pos=(-165, -66)),
+             Tool("Frente", "Transform", {"Input": I(link="Entrada"), "Size": I(1, f"{h}.EscalaFrente"),
+                                          "Center": I((0.5, 0.5), f"Point(0.5, 0.5 + {h}.MoverY)")}, pos=(-220, 33)),
+             rect("MascFrente", (-165, 66), Center=I((0.5, 0.5), f"Point(0.5, 0.5 + {h}.MoverY)"),
+                  Width=I(1, f"iif({wide}, 1, {ac}/{at})*{h}.EscalaFrente"),
+                  Height=I(0.5625, f"iif({wide}, 1/{ac}, 1/{at})*{h}.EscalaFrente"), CornerRadius=I(0, f"{h}.Redondeo"))]
+    ucs = [uc("AspClip", "Aspecto del clip (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3),
+           uc("AspTL", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625, 0.4, 3),
+           uc("ZoomFondo", "Zoom extra del fondo", 1.05, 1, 3), uc("EscalaFrente", "Escala del clip", 1, 0.3, 3),
+           uc("MoverY", "Posición vertical del clip", 0, -0.5, 0.5), uc("Redondeo", "Redondeo de esquinas", 0, 0, 0.5)]
+    tools.append(merge(h, "Fondo", "Frente", (-110, 0), blend=1, ucs=ucs, extra={
+        "EffectMask": I(link="MascFrente", out="Mask"), "AspClip": I(1.7778), "AspTL": I(0.5625), "ZoomFondo": I(1.05),
+        "EscalaFrente": I(1), "MoverY": I(0), "Redondeo": I(0)}))
+    pubs = [pub(h, "AspClip", "Aspecto del clip (16:9 = 1.778, 9:16 = 0.5625)", 1.7778),
+            pub(h, "AspTL", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625),
+            pub("Difuminar", "XBlurSize", "Desenfoque del fondo", 40), pub("Fondo", "Gain", "Brillo del fondo", 0.7),
+            pub(h, "ZoomFondo", "Zoom extra del fondo", 1.05), pub(h, "EscalaFrente", "Escala del clip", 1),
+            pub(h, "MoverY", "Posición vertical del clip", 0), pub(h, "Redondeo", "Redondeo de esquinas", 0)]
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Social_ZonaSegura")
+def social_zona_segura(name, anim):
+    """Guia de edicion: zonas que tapan los botones y textos de TikTok/Reels/Shorts (vertical) o marcos seguros (horizontal).
+    Quitala antes de exportar."""
+    h = "Zonas"
+    asp, v = f"{h}.Aspecto", f"{h}.Vertical"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)), solid("Lienzo", (0, 0, 0), (-385, 0), alpha=0)]
+    bands = [("Sup", f"Point(0.5, 1 - {h}.MSup/2)", "1", f"{h}.MSup/{asp}"),
+             ("Inf", f"Point(0.5, {h}.MInf/2)", "1", f"{h}.MInf/{asp}"),
+             ("Der", f"Point(1 - {h}.MDer/2, 0.5)", f"{h}.MDer", f"1.05/{asp}")]
+    layers = []
+    for i, (n, c, w, ht) in enumerate(bands):
+        tools += [rect(f"Masc{n}", (-330 + 55 * i, -132), Center=I((0.5, 0.5), c), Width=I(1, w), Height=I(0.1, ht)),
+                  solid(f"Zona{n}", (1, 0.15, 0.15), (-330 + 55 * i, -99), mask=f"Masc{n}")]
+        layers.append((f"Zona{n}", f"0.35*{v}"))
+    for i, (n, k) in enumerate((("Accion", 0.93), ("Titulos", 0.9))):
+        tools += [rect(f"Masc{n}", (-165 + 55 * i, -132), Width=I(k), Height=I(k / 1.7778, f"{k:g}/{asp}"), Solid=I(0), BorderWidth=I(0.002)),
+                  solid(f"Marco{n}", (0.2, 1, 0.4), (-165 + 55 * i, -99), mask=f"Masc{n}")]
+        layers.append((f"Marco{n}", f"0.8*(1 - {v})"))
+    for z in ("ZonaSup", "ZonaInf"):
+        next(t for t in tools if t.name == z).inputs.update({f"TopLeft{ch}": I(1, f"ZonaDer.TopLeft{ch}") for ch in ("Red", "Green", "Blue")})
+    t, last = compose(layers, x0=0)
+    tools += t
+    tools.append(merge("Guia", "Entrada", last, (330, 0), blend=1))
+    ucs = [uc("Vertical", "Vertical (desmarcado = marcos 16:9)", 1, 0, 1, checkbox=True),
+           uc("MSup", "Zona superior", 0.1, 0, 0.5), uc("MInf", "Zona inferior (descripción y subtítulos)", 0.22, 0, 0.5),
+           uc("MDer", "Zona derecha (botones)", 0.13, 0, 0.5),
+           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625, 0.4, 3)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Guia"), "Vertical": I(1), "MSup": I(0.1), "MInf": I(0.22), "MDer": I(0.13),
+                                                "Aspecto": I(0.5625)}, ucs, (385, 0)))
+    pubs = numbered([pub(h, "Vertical", "Vertical (desmarcado = marcos 16:9)", 1), pub(h, "MSup", "Zona superior", 0.1),
+                     pub(h, "MInf", "Zona inferior (descripción y subtítulos)", 0.22), pub(h, "MDer", "Zona derecha (botones)", 0.13),
+                     pub_color("ZonaDer", "Color de las zonas", (1, 0.15, 0.15), "c1"), pub("Guia", "Blend", "Opacidad de la guía", 1),
+                     pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625)])
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Effects", "PRO_FX_Look_Digicam")
+def look_digicam(name, anim):
+    """Camara digital de los 2000 (Y2K): saturacion y brillo marcados, ruido fino y fecha naranja en la esquina."""
+    h = "Digicam"
+    tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)),
+             Tool("Look", "BrightnessContrast", {"Input": I(link="Entrada"), "Saturation": I(1.25), "Contrast": I(0.12), "Gain": I(1.05)},
+                  pos=(-385, 0))]
+    t, last = blk_cast("Frio", "Look", -330, (0.96, 1, 1), 1)
+    tools += t
+    t, last = blk_bloom("Bl", last, -275, low=0.65, radius=20, blend=0.35)
+    tools += t
+    t, last = blk_grain("Gr", last, None, -110, scale=90)
+    tools += t
+    tools[-1].inputs["Blend"] = I(0.06)
+    tools += [solid("Lienzo", (0, 0, 0), (0, -66), alpha=0),
+              text_tool("Fecha", "'26 10 28", 0.04, (0.84, 0.08), (0, -165), rgb=(1, 0.55, 0.1), font="OCR A Extended", style="Regular"),
+              Tool("FechaHalo", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(6), "Input": I(link="Fecha")}, pos=(55, -165))]
+    t, over = compose([("FechaHalo", "0.7"), ("Fecha", None)], x0=0)
+    tools += t
+    tools.append(merge(h, last, over, (165, 0), blend=1))
+    pubs = numbered([pub("Fecha", "StyledText", "Fecha"), pub_color("Fecha", "Color de la fecha", (1, 0.55, 0.1), "c1", prefix="", suffix="1"),
+                     pub("Fecha", "Center", "Posición de la fecha"), pub(h, "Blend", "Opacidad de la fecha", 1),
+                     pub("Look", "Saturation", "Saturación", 1.25), pub("BlBloom", "Blend", "Brillo", 0.35), pub("GrGrano", "Blend", "Ruido", 0.06)])
+    return macro(name, [("Entrada", "Input")], pubs, h, tools)
+
+
+@register("Transitions", "PRO_TR_Remolino")
+def tr_remolino(name, anim):
+    """Remolino: la imagen se retuerce (Vortex) hasta el centro de la transicion y se destuerce ya en el clip B."""
+    h = "Mezcla"
+    p = f"{h}.Progreso"
+    bell = f"sin({p}*{PI})*sin({p}*{PI})"
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Giro", "Giro (grados)", 400, -1500, 1500), uc("Radio", "Radio del remolino", 1.2, 0.1, 3)]
+    tools = [Tool(h, "Dissolve", {"Mix": I(0, smooth(clamp01(f"({p} - 0.4)/0.2"))), "Progreso": I(link=anim, out="Value"),
+                                  "Giro": I(400), "Radio": I(1.2)}, ucs, (0, 0)),
+             Tool("Remolino", "Vortex", {"Input": I(link=h), "Angle": I(0, f"{h}.Giro*{bell}"), "Size": I(1.2, f"{h}.Radio")}, pos=(55, 0)),
+             Tool("Suaviza", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, f"6*{bell}"), "Input": I(link="Remolino")}, pos=(110, 0))]
+    pubs = [pub(h, "Giro", "Giro (grados)", 400), pub(h, "Radio", "Radio del remolino", 1.2)]
+    return macro(name, [(h, "Background"), (h, "Foreground")], pubs, "Suaviza", tools, anim)
+
+
 if __name__ == "__main__":
     for (cat, name), fn in BUILT.items():
         anim = "PRO" + name.split("_", 2)[-1].replace("_", "") + "Anim"

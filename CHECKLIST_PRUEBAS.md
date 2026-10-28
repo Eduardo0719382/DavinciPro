@@ -130,3 +130,18 @@ Incógnitas nuevas: acceso a `.X` y `.Y` de un punto en expresiones (Lente_Flare
 - [ ] 13.14 `KenBurns`: la imagen se acerca y se desplaza durante todo el clip sin mostrar bordes.
 - [ ] 13.15 `Luz_Rayos`: los rayos salen del punto de origen y se alargan alejándose de él.
 - [ ] 13.16 `Clima_Lluvia` y `Clima_Nieve`: las gotas y los copos **caen hacia abajo**. *Si suben, el sentido del centro de FastNoise está al revés: avísame y lo invierto en el script.*
+
+## 14. Lote 9: estilos de texto, horizontal ↔ vertical y looks
+Antes de probar, instala las fuentes de [docs/fuentes.md](docs/fuentes.md) (o comprueba que ya las tienes).
+- [ ] 14.1 Aparecen 16 plantillas nuevas (el registro debe mostrar 456) y 3 LUT nuevas en PRO_Pack.
+- [ ] 14.2 `Estilo_Viral`: el texto tiene un contorno negro grueso y una sombra suave. *Si no hay contorno ni sombra, fallan los elementos de sombreado de Text+ (Enabled2, Enabled8): avísame.*
+- [ ] 14.3 `Estilo_Gancho`: el titular tiene una sombra dura desplazada, cae desde grande y tiembla un momento al aterrizar.
+- [ ] 14.4 `Estilo_Documental`: cada texto tiene su caja de color detrás. *Si no hay caja, falla el elemento 6 (ElementShape = 2, Level = 1).*
+- [ ] 14.5 En los 10 estilos, el Inspector muestra la fuente correcta (no Arial). Si sale otra, esa fuente no está instalada o tiene otro nombre: dime cuál.
+- [ ] 14.6 Marca **Formato vertical (9:16)** en una timeline vertical: el bloque se recoloca, no se corta y queda fuera de las zonas de `Social_ZonaSegura`.
+- [ ] 14.7 `Estilo_Trailer`: las letras se separan despacio durante todo el clip. `Estilo_Gamer`: aparece a saltos y "PRESS START" parpadea.
+- [ ] 14.8 `Din_Eco` sobre un plano con movimiento: se ven copias del sujeto detrás. *Si no se ven, `TimeSpeed` no recibe fotogramas anteriores en la página Edit: avísame.*
+- [ ] 14.9 `Din_DesenfoqueMovimiento`: el desenfoque va en la dirección del ángulo.
+- [ ] 14.10 `Social_Reencuadre`: un clip 16:9 en una timeline 9:16 queda centrado, con fondo desenfocado y sin franjas negras. *Si el clip sale recortado o con franjas, dime cómo ajusta Resolve el clip (Image scaling) en tu proyecto.*
+- [ ] 14.11 `Social_ZonaSegura`: en vertical, las bandas rojas están arriba, abajo y a la derecha. Desmarcando "Vertical" se ven dos marcos verdes en 16:9.
+- [ ] 14.12 `Look_Digicam`: la fecha naranja aparece abajo a la derecha. `TR_Remolino`: la imagen se retuerce y termina limpia en el clip B.

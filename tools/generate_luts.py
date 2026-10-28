@@ -118,7 +118,58 @@ def bn_contraste(r, g, b):
     return clamp01(y), clamp01(y), clamp01(y)
 
 
+def cozy_ambar(r, g, b):
+    """Cozy / flat-lay: negros suaves, medios y altas hacia el ambar, verdes y azules apagados."""
+    def tone(x):
+        x = clamp01(x)
+        x = x + 0.12 * (x * x * (3.0 - 2.0 * x) - x)
+        return 0.04 + x * (0.97 - 0.04)
+    r, g, b = tone(r), tone(g), tone(b)
+    r, g, b = saturate(r, g, b, 0.85)
+    y = KR * r + KG * g + KB * b
+    w = y ** 0.8
+    r += 0.035 * w
+    g += 0.012 * w
+    b -= 0.045 * w
+    g -= 0.015 * max(0.0, g - (r + b) / 2)                   # verdes menos chillones
+    return clamp01(r), clamp01(g), clamp01(b)
+
+
+def digicam_y2k(r, g, b):
+    """Camara digital de los 2000: contraste duro, saturacion alta, sombras frias y altas que se queman pronto."""
+    def tone(x):
+        x = clamp01(x * 1.06)
+        return x + 0.35 * (x * x * (3.0 - 2.0 * x) - x)
+    r, g, b = tone(r), tone(g), tone(b)
+    r, g, b = saturate(r, g, b, 1.25)
+    y = KR * r + KG * g + KB * b
+    sh = (1.0 - y) ** 2
+    r += -0.02 * sh
+    g += 0.01 * sh
+    b += 0.035 * sh
+    return clamp01(r), clamp01(g), clamp01(b)
+
+
+def limpio_luminoso(r, g, b):
+    """Limpio y luminoso ("clean girl"): exposicion alta, poco contraste, saturacion baja y piel rosada."""
+    def tone(x):
+        x = clamp01(x)
+        x = 1.0 - (1.0 - x) ** 1.25                         # levanta medios
+        return 0.03 + x * (0.985 - 0.03)
+    r, g, b = tone(r), tone(g), tone(b)
+    r, g, b = saturate(r, g, b, 0.8)
+    y = KR * r + KG * g + KB * b
+    mid = 4.0 * y * (1.0 - y)
+    r += 0.015 * mid
+    b += 0.008 * mid
+    g -= 0.006 * mid
+    return clamp01(r), clamp01(g), clamp01(b)
+
+
 LOOKS = {
+    "PRO_Look_CozyAmbar": ("PRO Cozy Ambar (entrada Rec.709 G2.4)", cozy_ambar),
+    "PRO_Look_DigicamY2K": ("PRO Digicam Y2K (entrada Rec.709 G2.4)", digicam_y2k),
+    "PRO_Look_LimpioLuminoso": ("PRO Limpio Luminoso (entrada Rec.709 G2.4)", limpio_luminoso),
     "PRO_Look_PeliculaPrint": ("PRO Pelicula Print (entrada Rec.709 G2.4)", pelicula_print),
     "PRO_Look_BN_Contraste": ("PRO B/N Contraste (entrada Rec.709 G2.4)", bn_contraste),
     "PRO_Look_TealOrange": ("PRO Teal & Orange (entrada Rec.709 G2.4)", teal_orange),

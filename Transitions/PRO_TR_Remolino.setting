@@ -1,0 +1,88 @@
+{
+	Tools = ordered() {
+		PRO_TR_Remolino = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Mezcla", Source = "Background", },
+				MainInput2 = InstanceInput { SourceOp = "Mezcla", Source = "Foreground", },
+				Input1 = InstanceInput { SourceOp = "Mezcla", Source = "Giro", Name = "Giro (grados)", Default = 400, },
+				Input2 = InstanceInput { SourceOp = "Mezcla", Source = "Radio", Name = "Radio del remolino", Default = 1.2, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Suaviza", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Mezcla = Dissolve {
+					CtrlWShown = false,
+					Inputs = {
+						Mix = Input { Value = 0, Expression = "(max(0, min(1, (Mezcla.Progreso - 0.4)/0.2)))*(max(0, min(1, (Mezcla.Progreso - 0.4)/0.2)))*(3-2*(max(0, min(1, (Mezcla.Progreso - 0.4)/0.2))))", },
+						Progreso = Input { SourceOp = "PRORemolinoAnim", Source = "Value", },
+						Giro = Input { Value = 400, },
+						Radio = Input { Value = 1.2, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Giro = {
+							LINKS_Name = "Giro (grados)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 400,
+							INP_MinScale = -1500,
+							INP_MaxScale = 1500,
+							INP_MinAllowed = -1500,
+							INP_MaxAllowed = 1500,
+							ICS_ControlPage = "Controls",
+						},
+						Radio = {
+							LINKS_Name = "Radio del remolino",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1.2,
+							INP_MinScale = 0.1,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0.1,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+				Remolino = Vortex {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Angle = Input { Value = 0, Expression = "Mezcla.Giro*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+						Size = Input { Value = 1.2, Expression = "Mezcla.Radio", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, 0 } },
+				},
+				Suaviza = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 0, Expression = "6*sin(Mezcla.Progreso*3.14159265)*sin(Mezcla.Progreso*3.14159265)", },
+						Input = Input { SourceOp = "Remolino", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 110, 0 } },
+				},
+			},
+		},
+		PRORemolinoAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_Remolino"
+}

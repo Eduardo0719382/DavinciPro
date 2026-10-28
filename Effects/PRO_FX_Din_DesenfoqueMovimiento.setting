@@ -1,0 +1,85 @@
+{
+	Tools = ordered() {
+		PRO_FX_Din_DesenfoqueMovimiento = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Movimiento", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Movimiento", Source = "Intensidad", Name = "Intensidad", Default = 0.1, },
+				Input2 = InstanceInput { SourceOp = "Movimiento", Source = "Angle", Name = "Ángulo (grados)", Default = 0, },
+				Input3 = InstanceInput { SourceOp = "Movimiento", Source = "Pico", Name = "Solo al inicio (1 = se apaga)", Default = 0, },
+				Input4 = InstanceInput { SourceOp = "Movimiento", Source = "Duracion", Name = "Duración del pico (% del clip)", Default = 0.2, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Movimiento", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Movimiento = DirectionalBlur {
+					CtrlWShown = false,
+					Inputs = {
+						Length = Input { Value = 0.1, Expression = "Movimiento.Intensidad*(1 - Movimiento.Pico + Movimiento.Pico*(1 - (max(0, min(1, Movimiento.Progreso/max(Movimiento.Duracion, 0.0001))))*(max(0, min(1, Movimiento.Progreso/max(Movimiento.Duracion, 0.0001))))*(3-2*(max(0, min(1, Movimiento.Progreso/max(Movimiento.Duracion, 0.0001)))))))", },
+						Angle = Input { Value = 0, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Progreso = Input { SourceOp = "PRODinDesenfoqueMovimientoAnim", Source = "Value", },
+						Intensidad = Input { Value = 0.1, },
+						Pico = Input { Value = 0, },
+						Duracion = Input { Value = 0.2, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Intensidad = {
+							LINKS_Name = "Intensidad",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.1,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Pico = {
+							LINKS_Name = "Solo al inicio (1 = se apaga)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Duracion = {
+							LINKS_Name = "Duración del pico (% del clip)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.2,
+							INP_MinScale = 0.01,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0.01,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PRODinDesenfoqueMovimientoAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_FX_Din_DesenfoqueMovimiento"
+}

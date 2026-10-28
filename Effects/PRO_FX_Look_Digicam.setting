@@ -1,0 +1,190 @@
+{
+	Tools = ordered() {
+		PRO_FX_Look_Digicam = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Fecha", Source = "StyledText", Name = "Fecha", },
+				Input2 = InstanceInput { SourceOp = "Fecha", Source = "Red1", Name = "Color de la fecha", ControlGroup = 2, Default = 1, },
+				Input3 = InstanceInput { SourceOp = "Fecha", Source = "Green1", ControlGroup = 2, Default = 0.55, },
+				Input4 = InstanceInput { SourceOp = "Fecha", Source = "Blue1", ControlGroup = 2, Default = 0.1, },
+				Input5 = InstanceInput { SourceOp = "Fecha", Source = "Center", Name = "Posición de la fecha", },
+				Input6 = InstanceInput { SourceOp = "Digicam", Source = "Blend", Name = "Opacidad de la fecha", Default = 1, },
+				Input7 = InstanceInput { SourceOp = "Look", Source = "Saturation", Name = "Saturación", Default = 1.25, },
+				Input8 = InstanceInput { SourceOp = "BlBloom", Source = "Blend", Name = "Brillo", Default = 0.35, },
+				Input9 = InstanceInput { SourceOp = "GrGrano", Source = "Blend", Name = "Ruido", Default = 0.06, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Digicam", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 0 } },
+				},
+				Look = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Saturation = Input { Value = 1.25, },
+						Contrast = Input { Value = 0.12, },
+						Gain = Input { Value = 1.05, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, 0 } },
+				},
+				FrioColor = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0.96, },
+						TopLeftGreen = Input { Value = 1, },
+						TopLeftBlue = Input { Value = 1, },
+						TopLeftAlpha = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -66 } },
+				},
+				FrioDominante = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Look", Source = "Output", },
+						Foreground = Input { SourceOp = "FrioColor", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						Blend = Input { Value = 1, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				BlAltas = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "FrioDominante", Source = "Output", },
+						Low = Input { Value = 0.65, },
+						High = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -66 } },
+				},
+				BlHalo = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 20, },
+						Input = Input { SourceOp = "BlAltas", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				BlBloom = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "FrioDominante", Source = "Output", },
+						Foreground = Input { SourceOp = "BlHalo", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.35, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+				},
+				GrRuido = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 4, },
+						Contrast = Input { Value = 1.5, },
+						XScale = Input { Value = 90, },
+						SeetheRate = Input { Value = 1, },
+						Discontinuous = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 66 } },
+				},
+				GrGrano = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "BlBloom", Source = "Output", },
+						Foreground = Input { SourceOp = "GrRuido", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Overlay" }, },
+						Blend = Input { Value = 0.06, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, 0 } },
+				},
+				Lienzo = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						TopLeftRed = Input { Value = 0, },
+						TopLeftGreen = Input { Value = 0, },
+						TopLeftBlue = Input { Value = 0, },
+						TopLeftAlpha = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, -66 } },
+				},
+				Fecha = TextPlus {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Center = Input { Value = { 0.84, 0.08 }, },
+						StyledText = Input { Value = "'26 10 28", },
+						Font = Input { Value = "OCR A Extended", },
+						Style = Input { Value = "Regular", },
+						Size = Input { Value = 0.04, },
+						Red1 = Input { Value = 1, },
+						Green1 = Input { Value = 0.55, },
+						Blue1 = Input { Value = 0.1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, -165 } },
+				},
+				FechaHalo = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 6, },
+						Input = Input { SourceOp = "Fecha", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, -165 } },
+				},
+				M1 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Lienzo", Source = "Output", },
+						Foreground = Input { SourceOp = "FechaHalo", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "0.7", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+				},
+				M2 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "M1", Source = "Output", },
+						Foreground = Input { SourceOp = "Fecha", Source = "Output", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 55, 0 } },
+				},
+				Digicam = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "GrGrano", Source = "Output", },
+						Foreground = Input { SourceOp = "M2", Source = "Output", },
+						Blend = Input { Value = 1, },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 165, 0 } },
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Look_Digicam"
+}

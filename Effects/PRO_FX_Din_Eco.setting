@@ -1,0 +1,168 @@
+{
+	Tools = ordered() {
+		PRO_FX_Din_Eco = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Eco", Source = "Separacion", Name = "Separación (fotogramas)", Default = 2, },
+				Input2 = InstanceInput { SourceOp = "Eco", Source = "Intensidad", Name = "Intensidad", Default = 0.8, },
+				Input3 = InstanceInput { SourceOp = "Eco", Source = "Decaimiento", Name = "Decaimiento", Default = 0.6, },
+				Input4 = InstanceInput { SourceOp = "Eco", Source = "Fantasma", Name = "Original transparente", Default = 0, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Eco", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 0 } },
+				},
+				Retraso1 = TimeSpeed {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Speed = Input { Value = 1, },
+						Delay = Input { Value = 2, Expression = "1*Eco.Separacion", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -66 } },
+				},
+				Copia1 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "Retraso1", Source = "Output", },
+						Blend = Input { Value = 0.5, Expression = "Eco.Intensidad*pow(Eco.Decaimiento, 1)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, 0 } },
+				},
+				Retraso2 = TimeSpeed {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Speed = Input { Value = 1, },
+						Delay = Input { Value = 4, Expression = "2*Eco.Separacion", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -66 } },
+				},
+				Copia2 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Copia1", Source = "Output", },
+						Foreground = Input { SourceOp = "Retraso2", Source = "Output", },
+						Blend = Input { Value = 0.5, Expression = "Eco.Intensidad*pow(Eco.Decaimiento, 2)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				Retraso3 = TimeSpeed {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Speed = Input { Value = 1, },
+						Delay = Input { Value = 6, Expression = "3*Eco.Separacion", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -66 } },
+				},
+				Copia3 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Copia2", Source = "Output", },
+						Foreground = Input { SourceOp = "Retraso3", Source = "Output", },
+						Blend = Input { Value = 0.5, Expression = "Eco.Intensidad*pow(Eco.Decaimiento, 3)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 0 } },
+				},
+				Retraso4 = TimeSpeed {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Speed = Input { Value = 1, },
+						Delay = Input { Value = 8, Expression = "4*Eco.Separacion", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, -66 } },
+				},
+				Copia4 = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Copia3", Source = "Output", },
+						Foreground = Input { SourceOp = "Retraso4", Source = "Output", },
+						Blend = Input { Value = 0.5, Expression = "Eco.Intensidad*pow(Eco.Decaimiento, 4)", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+				Frente = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Copia4", Source = "Output", },
+						Foreground = Input { SourceOp = "Entrada", Source = "Output", },
+						Blend = Input { Value = 1, Expression = "1 - Eco.Fantasma", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, 0 } },
+				},
+				Eco = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Frente", Source = "Output", },
+						Separacion = Input { Value = 2, },
+						Intensidad = Input { Value = 0.8, },
+						Decaimiento = Input { Value = 0.6, },
+						Fantasma = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+					UserControls = ordered() {
+						Separacion = {
+							LINKS_Name = "Separación (fotogramas)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 2,
+							INP_MinScale = 1,
+							INP_MaxScale = 15,
+							INP_MinAllowed = 1,
+							INP_MaxAllowed = 15,
+							ICS_ControlPage = "Controls",
+						},
+						Intensidad = {
+							LINKS_Name = "Intensidad",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.8,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Decaimiento = {
+							LINKS_Name = "Decaimiento",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.6,
+							INP_MinScale = 0.1,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0.1,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Fantasma = {
+							LINKS_Name = "Original transparente",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Din_Eco"
+}

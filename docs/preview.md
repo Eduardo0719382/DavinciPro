@@ -388,3 +388,43 @@ Resolve las cargó (422 plantillas); su aspecto está **sin revisar visualmente*
 | `PRO_FX_Luz_Rayos` | Rayos de luz que salen de las luces altas desde un punto (ventanas, sol entre árboles) | Origen X/Y, largo, intensidad, umbral, color, refuerzo |
 | `PRO_FX_Clima_Lluvia` | Lluvia en dos capas, inclinada por el viento, con la escena algo más oscura | Cantidad, brillo, velocidad, viento, oscurecer |
 | `PRO_FX_Clima_Nieve` | Nieve en tres capas de profundidad con vaivén | Cantidad, brillo, velocidad, viento, desenfoque de copos cercanos |
+
+---
+
+# Lote 9: estilos de texto, horizontal ↔ vertical y looks
+
+Todos los estilos tienen **Formato vertical (9:16)**, Posición, Escala y duraciones de entrada y salida. La fuente de cada uno y dónde descargarla está en [fuentes.md](fuentes.md).
+
+## Estilos de texto (Titles › PRO Pack)
+
+| Pieza | Fuente | Para qué | Controles propios |
+|---|---|---|---|
+| `PRO_TTL_Estilo_Viral` | Montserrat Black | Subtítulo de reels: dos líneas en mayúsculas, contorno negro grueso, palabra clave amarilla, entrada con rebote | Línea 1, palabra clave, colores, contorno (color y grosor), rebote |
+| `PRO_TTL_Estilo_Gancho` | Anton + Montserrat | Gancho de los primeros segundos: titular amarillo con sombra dura que cae de golpe y tiembla | Titular, apoyo, sombra (color y desplazamiento), fuerza del golpe, temblor, inclinación |
+| `PRO_TTL_Estilo_Trailer` | Bebas Neue + Montserrat Light | Título de trailer: aparece desenfocado y las letras se separan despacio durante todo el clip | Título, subtítulo, separación de letras |
+| `PRO_TTL_Estilo_Elegante` | Segoe Script + Montserrat Light | Bodas y lifestyle: nombres caligráficos, fecha espaciada y línea fina | Nombres, fecha, fuentes, color |
+| `PRO_TTL_Estilo_Minimal` | Poppins SemiBold + Light | Vlog y corporativo: sube, aparece y aprieta el espaciado | Título, subtítulo, fuentes, colores |
+| `PRO_TTL_Estilo_Documental` | Roboto Condensed + Roboto | Video ensayo: título en caja negra y lugar o fecha en caja blanca, abajo a la izquierda | Textos, fuentes, colores de texto y de caja |
+| `PRO_TTL_Estilo_Deportivo` | Teko | Rótulo deportivo: barra inclinada del color del equipo, entra rápido con desenfoque | Nombre, dato, color del equipo |
+| `PRO_TTL_Estilo_Retro80` | Monoton + Montserrat | Synthwave: neón rosa con sombra cian, se enciende parpadeando | Título, subtítulo, sombra, halo |
+| `PRO_TTL_Estilo_Gamer` | Press Start 2P | Pixel art: aparece a saltos y "PRESS START" parpadea | Título, texto que parpadea, fuentes, colores |
+| `PRO_TTL_Estilo_Nota` | Ink Free | UGC: nota a mano con subrayado de rotulador y vaivén | Texto, color del subrayado, ancho, vaivén |
+
+## Efectos y transición
+
+| Pieza | Para qué | Controles |
+|---|---|---|
+| `PRO_FX_Din_Eco` | Estela de copias retrasadas detrás del movimiento (velocity edits, bailes) | Separación (fotogramas), intensidad, decaimiento, original transparente |
+| `PRO_FX_Din_DesenfoqueMovimiento` | Desenfoque direccional, fijo o solo al inicio del clip (cortes de velocidad) | Intensidad, ángulo, solo al inicio, duración del pico |
+| `PRO_FX_Social_Reencuadre` | Clip horizontal en timeline vertical (o al revés) con fondo desenfocado del mismo clip | Aspecto del clip y del timeline, desenfoque y brillo del fondo, zoom, escala, posición, redondeo |
+| `PRO_FX_Social_ZonaSegura` | Guía de edición: zonas que tapa la interfaz de TikTok, Reels o Shorts, o marcos seguros 16:9. **Quítala antes de exportar** | Vertical, zonas superior, inferior y derecha, color, opacidad, aspecto |
+| `PRO_FX_Look_Digicam` | Cámara digital de los 2000: saturada, con brillo, ruido fino y fecha naranja | Fecha, color, posición, saturación, brillo, ruido |
+| `PRO_TR_Remolino` | Transición: la imagen se retuerce hasta el centro y se destuerce en el clip B | Giro, radio |
+
+## Looks nuevos (página Color › LUTs › PRO_Pack)
+
+| LUT | Para qué |
+|---|---|
+| `PRO_Look_CozyAmbar` | Estética cozy y flat-lay: cálido, ámbar, verdes apagados |
+| `PRO_Look_DigicamY2K` | Cámara digital: contraste y saturación altos, sombras frías (combínalo con `Look_Digicam`) |
+| `PRO_Look_LimpioLuminoso` | "Clean girl" o lifestyle: luminoso, poco contraste, piel rosada |
