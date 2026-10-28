@@ -1,0 +1,178 @@
+{
+	Tools = ordered() {
+		PRO_TR_EstaticaTV = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Mezcla", Source = "Background", },
+				MainInput2 = InstanceInput { SourceOp = "Mezcla", Source = "Foreground", },
+				Input1 = InstanceInput { SourceOp = "Canal", Source = "Estatica", Name = "Estática", Default = 1, },
+				Input2 = InstanceInput { SourceOp = "Canal", Source = "Saltos", Name = "Saltos de imagen", Default = 1, },
+				Input3 = InstanceInput { SourceOp = "Canal", Source = "Lineas", Name = "Líneas", Default = 0.4, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Canal", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Mezcla = Dissolve {
+					CtrlWShown = false,
+					Inputs = {
+						Mix = Input { Value = 0, Expression = "iif(Canal.Progreso < 0.5, 0, 1)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, 0 } },
+				},
+				Salto = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + 0.02*Canal.Saltos*sin(Canal.Progreso*3.14159265)*sin(time*17.3), 0.5 + 0.08*Canal.Saltos*sin(Canal.Progreso*3.14159265)*sin(time*7.9))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, 0 } },
+				},
+				Ruido = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 2, },
+						Contrast = Input { Value = 2.5, },
+						XScale = Input { Value = 220, },
+						SeetheRate = Input { Value = 5, },
+						Discontinuous = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -132 } },
+				},
+				RuidoBN = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Ruido", Source = "Output", },
+						Saturation = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -132 } },
+				},
+				ConRuido = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Salto", Source = "Output", },
+						Foreground = Input { SourceOp = "RuidoBN", Source = "Output", },
+						Blend = Input { Value = 0, Expression = "min(1, Canal.Estatica*1.6*sin(Canal.Progreso*3.14159265)*sin(Canal.Progreso*3.14159265))", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				LineasOnda = Background {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Type = Input { Value = FuID { "Gradient" }, },
+						Repeat = Input { Value = FuID { "Ping-Pong" }, },
+						Start = Input { Value = { 0.5, 0.5 }, },
+						End = Input { Value = { 0.5, 0.55 }, Expression = "Point(0.5, 0.5 + 0.5/Canal.NumLineas)", },
+						Gradient = Input { Value = Gradient { Colors = { [0] = { 0, 0, 0, 1 }, [1] = { 1, 1, 1, 1 } } }, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -132 } },
+				},
+				LineasPlana = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "LineasOnda", Source = "Output", },
+						Low = Input { Value = 0, },
+						High = Input { Value = 0.6, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, -99 } },
+				},
+				Lineas = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ConRuido", Source = "Output", },
+						Foreground = Input { SourceOp = "LineasPlana", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Multiply" }, },
+						Blend = Input { Value = 0.3, Expression = "Canal.Lineas", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+				Canal = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Lineas", Source = "Output", },
+						Progreso = Input { SourceOp = "PROEstaticaTVAnim", Source = "Value", },
+						Estatica = Input { Value = 1, },
+						Saltos = Input { Value = 1, },
+						Lineas = Input { Value = 0.4, },
+						NumLineas = Input { Value = 300, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Estatica = {
+							LINKS_Name = "Estática",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Saltos = {
+							LINKS_Name = "Saltos de imagen",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 3,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 3,
+							ICS_ControlPage = "Controls",
+						},
+						Lineas = {
+							LINKS_Name = "Líneas",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.4,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						NumLineas = {
+							LINKS_Name = "Número de líneas",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 300,
+							INP_MinScale = 50,
+							INP_MaxScale = 1000,
+							INP_MinAllowed = 50,
+							INP_MaxAllowed = 1000,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PROEstaticaTVAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_EstaticaTV"
+}

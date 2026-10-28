@@ -2103,8 +2103,9 @@ def pop(h, a, b):
     return ease_back(clamp01(f"({h}.U - {a:g})/{b - a:g}"), h)
 
 
-def style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.0, dy_v=0.0, size_v=1.0):
-    """Como title(), con un Transform 'Formato' que recoloca y escala el bloque si se marca 'Formato vertical (9:16)'."""
+def style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.0, dy_v=0.0, size_v=1.0, mains=()):
+    """Como title(), con un Transform 'Formato' que recoloca y escala el bloque si se marca 'Formato vertical (9:16)'.
+    mains: entradas de video si la pieza es un efecto (p. ej. la foto del comentario)."""
     v = f"{h}.Vertical"
     ucs = ucs[:-2] + [uc("Vertical", "Formato vertical (9:16)", 0, 0, 1, checkbox=True)] + ucs[-2:]
     inputs = {**inputs, "Vertical": I(0)}
@@ -2121,7 +2122,7 @@ def style_title(name, h, ucs, inputs, body, layers, pubs, dy_h=0.0, dy_v=0.0, si
                             pub(h, "Entrada", "Duración entrada (% del clip)", entrada),
                             pub(h, "Salida", "Duración salida (% del clip, 0 = sin salida)", salida)])
     a = "PRO" + name.split("_", 2)[-1].replace("_", "") + "Anim"
-    return macro(name, [], pubs, h, tools, a).replace('"PRO_ANIM"', f'"{a}"')
+    return macro(name, list(mains), pubs, h, tools, a).replace('"PRO_ANIM"', f'"{a}"')
 
 
 def outline_pubs(tool, key, rgb, thickness):
@@ -2921,16 +2922,44 @@ def tr_antes_despues(name, anim):
 
 @register("Titles", "PRO_TTL_Social_Comentario")
 def social_comentario(name, anim_):
-    """Burbuja de 'responder al comentario' (TikTok/Reels): caja blanca redondeada, avatar y comentario; entra con pop."""
+    """Burbuja de 'responder al comentario' (TikTok/Reels): caja blanca redondeada, avatar de color y comentario; entra con pop."""
+    return comentario(name, foto=False)
+
+
+@register("Effects", "PRO_FX_Social_ComentarioFoto")
+def social_comentario_foto(name, anim_):
+    """La misma burbuja, pero el avatar es la foto del clip al que se aplica: pon la foto del usuario en una pista
+    superior y aplicale este efecto. Solo se ve la burbuja; el resto queda transparente."""
+    return comentario(name, foto=True)
+
+
+def comentario(name, foto):
     h = "Comentario"
-    ucs, inputs = kit(h, 0.12, 0.08, [uc("Rebote", "Rebote", 1.2, 0, 3), uc("Ancho", "Ancho de la burbuja", 0.52, 0.2, 1)],
-                      {"Rebote": I(1.2), "Ancho": I(0.52)})
+    extra_ucs = [uc("Rebote", "Rebote", 1.2, 0, 3), uc("Ancho", "Ancho de la burbuja", 0.52, 0.2, 1)]
+    extra_inputs = {"Rebote": I(1.2), "Ancho": I(0.52)}
+    if foto:
+        extra_ucs += [uc("ZoomFoto", "Zoom de la foto", 1, 0.3, 4), uc("FotoX", "Encuadre X de la foto", 0, -0.5, 0.5),
+                      uc("FotoY", "Encuadre Y de la foto", 0, -0.5, 0.5),
+                      uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625, 0.4, 3)]
+        extra_inputs.update({"ZoomFoto": I(1), "FotoX": I(0), "FotoY": I(0), "Aspecto": I(0.5625)})
+    ucs, inputs = kit(h, 0.12, 0.08, extra_ucs, extra_inputs)
     x0 = f"(0.5 - {h}.Ancho/2)"
+    d = 0.06 if foto else 0.045
+    xa = f"{x0} + {0.045 if foto else 0.04:g}"
     body = [solid("Base", (0, 0, 0), (-440, -198), alpha=0),
             rect("MascCaja", (-385, -231), Width=I(0.52, f"{h}.Ancho"), Height=I(0.1), CornerRadius=I(0.25)),
             solid("Caja", (1, 1, 1), (-385, -198), mask="MascCaja"),
-            ellipse("MascAvatar", (-330, -231), Center=I((0.27, 0.5), f"Point({x0} + 0.04, 0.5)"), Width=I(0.045), Height=I(0.045)),
-            solid("Avatar", (0.95, 0.3, 0.45), (-330, -198), mask="MascAvatar"),
+            ellipse("MascAvatar", (-330, -231), Center=I((0.27, 0.5), f"Point({xa}, 0.5)"), Width=I(d), Height=I(d))]
+    if foto:
+        # el centro de la foto (un circulo del alto del cuadro) se escala al diametro del avatar: d / (1/Aspecto)
+        body += [Tool("Foto", "Transform", {"Input": I(link="Entrada"), "Size": I(d * 0.5625, f"{d:g}*{h}.Aspecto*{h}.ZoomFoto"),
+                                            "Center": I((0.5, 0.5), f"Point({xa} - {h}.FotoX*{d:g}*{h}.Aspecto*{h}.ZoomFoto, 0.5 - {h}.FotoY*{d:g}*{h}.ZoomFoto)")},
+                      pos=(-330, -264)),
+                 merge("Avatar", "Base", "Foto", (-330, -198), blend=1, extra={"EffectMask": I(link="MascAvatar", out="Mask")})]
+        body.insert(0, Tool("Entrada", "PipeRouter", pos=(-440, -264)))
+    else:
+        body.append(solid("Avatar", (0.95, 0.3, 0.45), (-330, -198), mask="MascAvatar"))
+    body += [
             styled("Cabecera", "Responder al comentario de @usuario", "Poppins", "Regular", 0.016, (-275, -231), rgb=(0.45, 0.45, 0.45),
                    center=(0.31, 0.522), left=True),
             styled("Texto", "¿Cómo hiciste ese efecto?", "Poppins", "SemiBold", 0.026, (-220, -231), rgb=(0.08, 0.08, 0.08),
@@ -2939,12 +2968,149 @@ def social_comentario(name, anim_):
             merge("B3", "B2", "Cabecera", (-275, -132)), merge("B4", "B3", "Texto", (-220, -132)),
             mover("Pop", "B4", (-165, -132), size=f"max(0, {pop(h, 0, 1)})")]
     for tn in ("Cabecera", "Texto"):
-        next(t for t in body if t.name == tn).inputs["Center"] = I((0.31, 0.5), f"Point({x0} + 0.075, {0.522 if tn == 'Cabecera' else 0.478})")
+        next(t for t in body if t.name == tn).inputs["Center"] = I((0.31, 0.5), f"Point({x0} + {0.03 + d:g}, {0.522 if tn == 'Cabecera' else 0.478})")
     pubs = [pub("Cabecera", "StyledText", "Cabecera"), pub("Texto", "StyledText", "Comentario"),
             pub("Texto", "Font", "Fuente", group="f1"), pub("Texto", "Style", group="f1"), pub("Texto", "Size", "Tamaño del comentario", 0.026),
-            pub_color("Caja", "Color de la burbuja", (1, 1, 1), "c1"), pub_color("Avatar", "Color del avatar", (0.95, 0.3, 0.45), "c2"),
-            pub(h, "Ancho", "Ancho de la burbuja", 0.52), pub(h, "Rebote", "Rebote", 1.2)]
-    return style_title(name, h, ucs, inputs, body, [("Pop", f"{h}.Xs*min(1, 3*{h}.U)")], pubs, dy_h=0.2, dy_v=0.12, size_v=1.3)
+            pub_color("Caja", "Color de la burbuja", (1, 1, 1), "c1")]
+    if foto:
+        pubs += [pub(h, "ZoomFoto", "Zoom de la foto", 1), pub(h, "FotoX", "Encuadre X de la foto", 0),
+                 pub(h, "FotoY", "Encuadre Y de la foto", 0), pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625)]
+    else:
+        pubs.append(pub_color("Avatar", "Color del avatar", (0.95, 0.3, 0.45), "c2"))
+    pubs += [pub(h, "Ancho", "Ancho de la burbuja", 0.52), pub(h, "Rebote", "Rebote", 1.2)]
+    return style_title(name, h, ucs, inputs, body, [("Pop", f"{h}.Xs*min(1, 3*{h}.U)")], pubs, dy_h=0.2, dy_v=0.12, size_v=1.3,
+                       mains=[("Entrada", "Input")] if foto else ())
+
+
+# ----------------------------------------------------------------------- lote 12: transiciones
+@register("Transitions", "PRO_TR_DestelloLente")
+def tr_destello_lente(name, anim):
+    """Destello de lente: un nucleo de luz cruza la imagen con una raya anamorfica y tapa el corte con un golpe de luz."""
+    h = "Destello"
+    p = f"{h}.Progreso"
+    bell = f"sin({p}*{PI})"
+    tools = [Tool("Mezcla", "Dissolve", {"Mix": I(0, smooth(clamp01(f"({p} - 0.46)/0.08")))}, pos=(-330, 0)),
+             Tool("Exposicion", "BrightnessContrast", {"Input": I(link="Mezcla"), "Gain": I(1, f"1 + 1.5*{h}.Intensidad*{bell}*{bell}*{bell}")},
+                  pos=(-275, 0)),
+             ellipse("MascNucleo", (-220, -132), SoftEdge=I(0.5), Width=I(0.5, f"0.15 + 0.6*{bell}"), Height=I(0.5, f"0.15 + 0.6*{bell}"),
+                     Center=I((0.5, 0.5), f"Point(-0.2 + 1.4*{p}, {h}.Altura)")),
+             solid("Nucleo", (1, 0.92, 0.8), (-220, -99), mask="MascNucleo"),
+             rect("MascRaya", (-165, -132), Width=I(4), Height=I(0.006), SoftEdge=I(0.01),
+                  Center=I((0.5, 0.5), f"Point(-0.2 + 1.4*{p}, {h}.Altura)")),
+             solid("Raya", (0.55, 0.75, 1), (-165, -99), mask="MascRaya"),
+             merge("ConNucleo", "Exposicion", "Nucleo", (-220, 0), "Screen", blend=0, blend_expr=f"{h}.Intensidad*{bell}"),
+             merge("ConRaya", "ConNucleo", "Raya", (-165, 0), "Screen", blend=0, blend_expr=f"{h}.Intensidad*{bell}")]
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Intensidad", "Intensidad", 1, 0, 2), uc("Altura", "Altura del destello", 0.6, 0, 1)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConRaya"), "Progreso": I(link=anim, out="Value"), "Intensidad": I(1),
+                                                "Altura": I(0.6)}, ucs, (-110, 0)))
+    pubs = numbered([pub(h, "Intensidad", "Intensidad", 1), pub(h, "Altura", "Altura del destello", 0.6),
+                     pub_color("Nucleo", "Color del núcleo", (1, 0.92, 0.8), "c1"), pub_color("Raya", "Color de la raya", (0.55, 0.75, 1), "c2")])
+    return macro(name, [("Mezcla", "Background"), ("Mezcla", "Foreground")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_ZoomTraves")
+def tr_zoom_traves(name, anim):
+    """Zoom a traves: se entra con zoom a un punto de A (por ejemplo, un ojo o una ventana) y se sale desde un punto de B."""
+    h = "Traves"
+    p = f"{h}.Progreso"
+    a, b = f"min(1, 2*{p})", f"(1 - max(0, 2*{p} - 1))"
+    bell = f"sin({p}*{PI})*sin({p}*{PI})"
+    tools = []
+    for n_, k, px, py, y in (("ZoomA", a, f"{h}.AX", f"{h}.AY", -33), ("ZoomB", b, f"{h}.BX", f"{h}.BY", 33)):
+        s = f"(1 + {h}.Zoom*pow({k}, 3))"
+        tools.append(Tool(n_, "Transform", {"Size": I(1, s), "Center": I((0.5, 0.5), f"Point(0.5 + ({px} - 0.5)*(1 - {s}), 0.5 + ({py} - 0.5)*(1 - {s}))")},
+                          pos=(-275, y)))
+    tools += [Tool("Mezcla", "Dissolve", {"Mix": I(0, smooth(clamp01(f"({p} - 0.45)/0.1"))), "Background": I(link="ZoomA"),
+                                          "Foreground": I(link="ZoomB")}, pos=(-220, 0)),
+              Tool("Movimiento", "Blur", {"Filter": I(FuID("Fast Gaussian")), "XBlurSize": I(0, f"{h}.Desenfoque*{bell}"),
+                                          "Input": I(link="Mezcla")}, pos=(-165, 0))]
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("AX", "Punto de A: X", 0.5, 0, 1), uc("AY", "Punto de A: Y", 0.5, 0, 1),
+           uc("BX", "Punto de B: X", 0.5, 0, 1), uc("BY", "Punto de B: Y", 0.5, 0, 1), uc("Zoom", "Zoom", 6, 0.5, 20),
+           uc("Desenfoque", "Desenfoque", 20, 0, 100)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Movimiento"), "Progreso": I(link=anim, out="Value"), "AX": I(0.5), "AY": I(0.5),
+                                                "BX": I(0.5), "BY": I(0.5), "Zoom": I(6), "Desenfoque": I(20)}, ucs, (-110, 0)))
+    pubs = [pub(h, "AX", "Punto de A: X", 0.5), pub(h, "AY", "Punto de A: Y", 0.5), pub(h, "BX", "Punto de B: X", 0.5),
+            pub(h, "BY", "Punto de B: Y", 0.5), pub(h, "Zoom", "Zoom", 6), pub(h, "Desenfoque", "Desenfoque", 20)]
+    return macro(name, [("ZoomA", "Input"), ("ZoomB", "Input")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_EstaticaTV")
+def tr_estatica_tv(name, anim):
+    """Cambio de canal: rafaga de estatica con lineas y saltos verticales entre A y B."""
+    h = "Canal"
+    p = f"{h}.Progreso"
+    bell = f"sin({p}*{PI})"
+    tools = [Tool("Mezcla", "Dissolve", {"Mix": I(0, f"iif({p} < 0.5, 0, 1)")}, pos=(-385, 0)),
+             Tool("Salto", "Transform", {"Input": I(link="Mezcla"),
+                                         "Center": I((0.5, 0.5), f"Point(0.5 + 0.02*{h}.Saltos*{bell}*sin(time*17.3), 0.5 + 0.08*{h}.Saltos*{bell}*sin(time*7.9))")},
+                  pos=(-330, 0)),
+             Tool("Ruido", "FastNoise", {**frame_format(), "Detail": I(2), "Contrast": I(2.5), "XScale": I(220), "SeetheRate": I(5),
+                                         "Discontinuous": I(1)}, pos=(-330, -132)),
+             Tool("RuidoBN", "BrightnessContrast", {"Input": I(link="Ruido"), "Saturation": I(0)}, pos=(-275, -132)),
+             merge("ConRuido", "Salto", "RuidoBN", (-275, 0), blend=0, blend_expr=f"min(1, {h}.Estatica*1.6*{bell}*{bell})")]
+    t, last = scanlines("Lineas", "ConRuido", h, -220, high=0.6)
+    tools += t
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Estatica", "Estática", 1, 0, 1), uc("Saltos", "Saltos de imagen", 1, 0, 3),
+           uc("Lineas", "Líneas", 0.4, 0, 1), uc("NumLineas", "Número de líneas", 300, 50, 1000)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Progreso": I(link=anim, out="Value"), "Estatica": I(1), "Saltos": I(1),
+                                                "Lineas": I(0.4), "NumLineas": I(300)}, ucs, (-110, 0)))
+    pubs = [pub(h, "Estatica", "Estática", 1), pub(h, "Saltos", "Saltos de imagen", 1), pub(h, "Lineas", "Líneas", 0.4)]
+    return macro(name, [("Mezcla", "Background"), ("Mezcla", "Foreground")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_Apagon")
+def tr_apagon(name, anim):
+    """Apagon: la luz de A parpadea hasta apagarse y B se enciende parpadeando (terror, misterio, cambios de escena)."""
+    h = "Apagon"
+    p = f"{h}.Progreso"
+    env = f"abs(1 - 2*{p})"
+    on = f"iif(abs(sin(time*2.9*{h}.Velocidad)*sin(time*1.1*{h}.Velocidad + 2)) > 0.9*(1 - {env}), 1, 0.08)"
+    tools = [Tool("Mezcla", "Dissolve", {"Mix": I(0, f"iif({p} < 0.5, 0, 1)")}, pos=(-275, 0)),
+             Tool("Luz", "BrightnessContrast", {"Input": I(link="Mezcla"), "Gain": I(1, f"{on}*(0.25 + 0.75*{env})"),
+                                                "Saturation": I(1, f"0.6 + 0.4*{env}")}, pos=(-220, 0))]
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Velocidad", "Velocidad del parpadeo", 1, 0.2, 4)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Luz"), "Progreso": I(link=anim, out="Value"), "Velocidad": I(1)}, ucs, (-165, 0)))
+    pubs = [pub(h, "Velocidad", "Velocidad del parpadeo", 1)]
+    return macro(name, [("Mezcla", "Background"), ("Mezcla", "Foreground")], pubs, h, tools, anim)
+
+
+@register("Transitions", "PRO_TR_Corte")
+def tr_corte(name, anim):
+    """Corte de espada (anime / gaming): una linea blanca raja A en diagonal y las dos mitades se deslizan y descubren B."""
+    h = "Corte"
+    p = f"{h}.Progreso"
+    th = f"({h}.Angulo*{PI}/180)"
+    asp = f"{h}.Aspecto"
+    line = clamp01(f"{p}/0.15")
+    e = smooth(clamp01(f"({p} - 0.15)/0.85"))
+    tools = [Tool("EntradaA", "PipeRouter", pos=(-385, -66)), Tool("EntradaB", "PipeRouter", pos=(-385, 66))]
+    last = "EntradaB"
+    for side, sg in (("Sup", 1), ("Inf", -1)):
+        mx = f"0.5 + {sg}*4*(-sin({th}))"
+        my = f"0.5 + {sg}*4*cos({th})*{asp}"
+        dx = f"{sg}*{h}.Distancia*{e}*cos({th})"
+        dy = f"{sg}*{h}.Distancia*{e}*sin({th})*{asp}"
+        sep_x = f"{sg}*0.04*{e}*(-sin({th}))"
+        sep_y = f"{sg}*0.04*{e}*cos({th})*{asp}"
+        tools += [Tool(f"Mitad{side}", "Transform", {"Input": I(link="EntradaA"),
+                                                      "Center": I((0.5, 0.5), f"Point(0.5 + {dx} + {sep_x}, 0.5 + {dy} + {sep_y})")},
+                       pos=(-330, -66 * sg)),
+                  rect(f"Masc{side}", (-275, -132 * sg), Width=I(8), Height=I(8), Angle=I(30, f"{h}.Angulo"),
+                       Center=I((0.5, 0.5), f"Point({mx} + {dx} + {sep_x}, {my} + {dy} + {sep_y})")),
+                  merge(f"Con{side}", last, f"Mitad{side}", (-275 + 55 * (sg < 0), 0), extra={"EffectMask": I(link=f"Masc{side}", out="Mask")})]
+        last = f"Con{side}"
+    tools += [rect("MascTajo", (-165, -132), Width=I(0, f"8*{line}"), Height=I(0.004), Angle=I(30, f"{h}.Angulo")),
+              solid("Tajo", (1, 1, 1), (-165, -99), mask="MascTajo"),
+              merge("ConTajo", last, "Tajo", (-165, 0), blend=0, blend_expr=f"min(1, 3*(1 - {e}))*iif({p} > 0, 1, 0)")]
+    ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Angulo", "Ángulo del corte (grados)", 30, -90, 90),
+           uc("Distancia", "Distancia que se deslizan", 1.2, 0, 3),
+           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="ConTajo"), "Progreso": I(link=anim, out="Value"), "Angulo": I(30),
+                                                "Distancia": I(1.2), "Aspecto": I(1.7778)}, ucs, (-110, 0)))
+    pubs = numbered([pub(h, "Angulo", "Ángulo del corte (grados)", 30), pub(h, "Distancia", "Distancia que se deslizan", 1.2),
+                     pub_color("Tajo", "Color de la línea", (1, 1, 1), "c1"),
+                     pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778)])
+    return macro(name, [("EntradaA", "Input"), ("EntradaB", "Input")], pubs, h, tools, anim)
 
 
 @register("Titles", "PRO_TTL_Social_Ranking")

@@ -1,0 +1,73 @@
+{
+	Tools = ordered() {
+		PRO_TR_Apagon = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Mezcla", Source = "Background", },
+				MainInput2 = InstanceInput { SourceOp = "Mezcla", Source = "Foreground", },
+				Input1 = InstanceInput { SourceOp = "Apagon", Source = "Velocidad", Name = "Velocidad del parpadeo", Default = 1, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Apagon", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Mezcla = Dissolve {
+					CtrlWShown = false,
+					Inputs = {
+						Mix = Input { Value = 0, Expression = "iif(Apagon.Progreso < 0.5, 0, 1)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				Luz = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Mezcla", Source = "Output", },
+						Gain = Input { Value = 1, Expression = "iif(abs(sin(time*2.9*Apagon.Velocidad)*sin(time*1.1*Apagon.Velocidad + 2)) > 0.9*(1 - abs(1 - 2*Apagon.Progreso)), 1, 0.08)*(0.25 + 0.75*abs(1 - 2*Apagon.Progreso))", },
+						Saturation = Input { Value = 1, Expression = "0.6 + 0.4*abs(1 - 2*Apagon.Progreso)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 0 } },
+				},
+				Apagon = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Luz", Source = "Output", },
+						Progreso = Input { SourceOp = "PROApagonAnim", Source = "Value", },
+						Velocidad = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Velocidad = {
+							LINKS_Name = "Velocidad del parpadeo",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0.2,
+							INP_MaxScale = 4,
+							INP_MinAllowed = 0.2,
+							INP_MaxAllowed = 4,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PROApagonAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_Apagon"
+}

@@ -113,3 +113,9 @@
 - **Límite:** las canciones con tempo variable desfasan con el tiempo. En ese caso, corta el Adjustment Clip y reajusta el desfase en cada tramo.
 - **Clones:** usa el modo de bordes de Transform. `Edges = 1` aparece en las plantillas oficiales; que 1 sea Wrap y 3 sea Mirror es una suposición (checklist 16.5).
 - **Fuentes de la investigación:** las guías de 2026 coinciden en editar al ritmo (cortes, zooms, flashes y sacudidas en los golpes), en los velocity edits y en el glitch. No hay datos fiables sobre impact frames ni antes/después; se incluyen porque son formatos muy comunes en shorts.
+
+## D22. Comentario con foto como efecto, no como título
+- **Elegido:** `PRO_FX_Social_ComentarioFoto` es un efecto que se aplica a la foto puesta en la timeline. Usa el clip como avatar y dibuja la burbuja; el resto queda transparente.
+- **Considerado:** un título con un Loader y el campo "Image File", como hacen las plantillas oficiales de Resolve.
+- **Por qué no:** el Loader necesita una imagen por defecto que el instalador tendría que copiar en una subcarpeta. Además, el tamaño de la foto cargada depende de su resolución y no se puede encajar en el círculo sin probarlo. Con el efecto, Resolve entrega la foto ya ajustada al cuadro y el recorte es predecible. Si quieres el campo para elegir archivo, se puede intentar en otra versión.
+- **Transiciones del lote 12:** las guías de 2026 destacan el glitch, la distorsión digital, el zoom y el "masking". Se eligieron variantes que Resolve no trae: destello de lente, zoom a través de un punto, cambio de canal, apagón y corte diagonal.

@@ -466,3 +466,26 @@ Los que van "sobre negro" se usan en una pista superior con **Composite Mode = S
 | `PRO_TTL_Social_Ranking` | Número enorme (#1, #2…) en Anton para vídeos de top, con golpe de entrada y nombre debajo | Puesto, nombre, fuentes, colores, fuerza del golpe, formato vertical |
 
 **Consejo para velocity edits:** combina el **Retime** de Resolve (curva de velocidad del clip) con `PulsoRitmo` o `ImpactoFrames` en el golpe, y con `Din_Eco` o `Din_DesenfoqueMovimiento` en el tramo rápido.
+
+---
+
+# Lote 12: comentario con foto y más transiciones
+
+## `PRO_FX_Social_ComentarioFoto`: comentario con la foto del usuario
+Es la misma burbuja que `PRO_TTL_Social_Comentario`, pero el avatar es una foto.
+1. Arrastra la foto del usuario (captura o imagen de perfil) a una pista **por encima** del vídeo y dale la duración que quieras.
+2. Aplícale el efecto `PRO_FX_Social_ComentarioFoto` (Effects › PRO Pack).
+3. La foto desaparece y queda solo la burbuja, con el centro de la foto recortado en círculo como avatar.
+4. Ajusta **Zoom de la foto** y **Encuadre X/Y** para centrar la cara. Pon el **Aspecto** de tu timeline (9:16 = 0.5625 por defecto).
+
+Controles: los del comentario (cabecera, comentario, fuente, color, ancho, rebote, formato vertical, posición, escala) más zoom y encuadre de la foto.
+
+## Transiciones
+
+| Pieza | Para qué | Controles |
+|---|---|---|
+| `PRO_TR_DestelloLente` | Un núcleo de luz cruza la imagen con raya anamórfica y tapa el corte con un golpe de luz | Intensidad, altura del destello, colores del núcleo y de la raya |
+| `PRO_TR_ZoomTraves` | Zoom a través de un punto de A (un ojo, una ventana, una pantalla) y salida desde un punto de B | Punto de A (X/Y), punto de B (X/Y), zoom, desenfoque |
+| `PRO_TR_EstaticaTV` | Cambio de canal: ráfaga de estática con líneas y saltos | Estática, saltos, líneas |
+| `PRO_TR_Apagon` | La luz de A parpadea hasta apagarse y B se enciende parpadeando | Velocidad del parpadeo |
+| `PRO_TR_Corte` | Corte de espada: una línea blanca raja A en diagonal y las mitades se deslizan | Ángulo, distancia, color de la línea, aspecto |

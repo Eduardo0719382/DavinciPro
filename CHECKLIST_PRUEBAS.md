@@ -167,3 +167,10 @@ Antes de probar, instala las fuentes de [docs/fuentes.md](docs/fuentes.md) (o co
 - [ ] 16.9 `TR_AntesDespues` con 3 s de duración: la línea llega al centro, se detiene, luego termina. Las etiquetas ANTES y DESPUÉS tienen caja negra.
 - [ ] 16.10 `Social_Comentario`: la burbuja blanca entra con pop y el texto queda dentro. Si el comentario es largo, sube el "Ancho de la burbuja".
 - [ ] 16.11 `Social_Ranking`: "#1" cae de grande con contorno y sombra, y el nombre aparece debajo.
+
+## 17. Lote 12: comentario con foto y transiciones
+- [ ] 17.1 `Social_ComentarioFoto` sobre una foto en V2: solo se ve la burbuja, con la foto recortada en círculo. Con Zoom de la foto = 1 el círculo queda lleno. *Si la foto sale pequeña o desplazada, revisa el Aspecto; si aun así falla, dime cómo ajusta Resolve la imagen al timeline.*
+- [ ] 17.2 `TR_DestelloLente`: la luz cruza de izquierda a derecha y el corte queda tapado por el destello.
+- [ ] 17.3 `TR_ZoomTraves`: con Punto de A en una cara, el zoom entra justo en ese punto y no se va hacia el centro.
+- [ ] 17.4 `TR_EstaticaTV` y `TR_Apagon` funcionan con duraciones de 10 y 30 fotogramas.
+- [ ] 17.5 `TR_Corte`: la línea aparece en diagonal y las mitades se separan **a lo largo** de la línea, sin huecos donde no toca. *Si el corte va en otra dirección que las mitades, el sentido del ángulo de las máscaras está al revés (como en 15.7).*
