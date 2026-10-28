@@ -1023,7 +1023,7 @@ def anillo(name, anim):
         inputs = {**mask_format(),
                   "Center": I((0.5, 0.5), f"Point(0.5 + {h}.Radio*sin({th} + 1.5707963)/{h}.Aspecto, 0.5 + {h}.Radio*sin({th}))"),
                   "Angle": I(0, f"{th}*57.29578 + 90"),
-                  "Width": I(0.03, f"{h}.Largo"), "Height": I(0.006, f"{h}.Grosor")}
+                  "Width": I(0.03, f"{h}.Largo"), "Height": I(0.0034, f"{h}.Grosor*{h}.Aspecto")}
         if prev:
             inputs["EffectMask"] = I(link=prev, out="Mask")
         tools.append(Tool(f"Guion{i}", "RectangleMask", inputs, pos=(-275 + 11 * i, -99)))
@@ -1101,6 +1101,11 @@ def texto_pop(name, anim):
 
 
 # ======================================================================= GRAFICOS ANIMADOS (lote 7)
+# RectangleMask.Height es fraccion del ALTO del cuadro. Estos titulos estan pensados para 16:9, asi que un alto
+# pensado en unidades del ancho se multiplica por W16 (= 16/9) para que las formas tengan la proporcion exacta.
+W16 = 1.7778
+
+
 def kit(h, entrada=0.2, salida=0.12, extra_ucs=(), extra_inputs=None):
     """Controles comunes de titulos: U = avance de la entrada (0..1), Xs = factor de salida suave (1..0)."""
     p = f"{h}.Progreso"
@@ -1171,10 +1176,10 @@ def barra_progreso(name, anim):
                                       uc("PosY", "Altura en pantalla", 0.06, 0, 1), uc("Redondeo", "Redondeo", 0.5, 0, 1)],
                       {"Ancho": I(0.8), "Alto": I(0.012), "PosY": I(0.06), "Redondeo": I(0.5)})
     body = [rect("MascFondo", (-385, -99), Center=I((0.5, 0.06), f"Point(0.5, {h}.PosY)"), Width=I(0.8, f"{h}.Ancho"),
-                 Height=I(0.012, f"{h}.Alto"), CornerRadius=I(0.5, f"{h}.Redondeo")),
+                 Height=I(0.0213, f"{h}.Alto*{W16}"), CornerRadius=I(0.5, f"{h}.Redondeo")),
             solid("Pista", (1, 1, 1), (-385, -66), alpha=0.25, mask="MascFondo"),
             rect("MascRelleno", (-330, -99), Center=I((0.5, 0.06), f"Point(0.5 - {h}.Ancho/2 + {h}.Ancho*{p}/2, {h}.PosY)"),
-                 Width=I(0, f"{h}.Ancho*{p}"), Height=I(0.012, f"{h}.Alto"), CornerRadius=I(0.5, f"{h}.Redondeo")),
+                 Width=I(0, f"{h}.Ancho*{p}"), Height=I(0.0213, f"{h}.Alto*{W16}"), CornerRadius=I(0.5, f"{h}.Redondeo")),
             solid("Relleno", (1, 0.25, 0.25), (-330, -66), mask="MascRelleno")]
     pubs = [pub_color("Pista", "Color de la pista", (1, 1, 1), 1), pub("Pista", "TopLeftAlpha", "Opacidad de la pista", 0.25),
             pub_color("Relleno", "Color del relleno", (1, 0.25, 0.25), 5), pub(h, "Ancho", "Ancho total", 0.8),
@@ -1214,8 +1219,8 @@ def callout(name, anim):
                       {"Angulo": I(35), "Largo": I(0.18), "Aspecto": I(1.7778)})
     body = [ellipse("MascPunto", (-385, -132), Center=I((0.4, 0.4)), Width=I(0.014), Height=I(0.014)),
             ellipse("MascAro", (-330, -132), Center=I((0.4, 0.4), "Point(MascPunto.Center.X, MascPunto.Center.Y)"),
-                    Width=I(0.03), Height=I(0.03), Solid=I(0), BorderWidth=I(0.002)),
-            rect("MascLinea", (-275, -132), Width=I(0, f"{h}.Largo*{sl}"), Height=I(0.0025), Angle=I(35, f"{h}.Angulo"),
+                    Width=I(0.03), Height=I(0.03 * W16), Solid=I(0), BorderWidth=I(0.002)),
+            rect("MascLinea", (-275, -132), Width=I(0, f"{h}.Largo*{sl}"), Height=I(0.0025 * W16), Angle=I(35, f"{h}.Angulo"),
                  Center=I((0.5, 0.5), f"Point(MascPunto.Center.X + {dx}*{h}.Largo*{sl}/2, MascPunto.Center.Y + {dy}*{h}.Largo*{sl}/2)")),
             solid("Punto", (1, 1, 1), (-385, -99), mask="MascPunto"),
             solid("Aro", (1, 1, 1), (-330, -99), mask="MascAro"),
@@ -1240,9 +1245,9 @@ def end_screen(name, anim):
     h = "Final"
     ucs, inputs = kit(h, 0.15, 0.08)
     body = [text_tool("Titulo", "¡GRACIAS POR VER!", 0.06, (0.5, 0.86), (-385, -165)),
-            rect("MascVideo1", (-385, -132), Center=I((0.28, 0.55)), Width=I(0.36), Height=I(0.2025), CornerRadius=I(0.06),
+            rect("MascVideo1", (-385, -132), Center=I((0.28, 0.55)), Width=I(0.36), Height=I(0.36), CornerRadius=I(0.06),
                  Solid=I(0), BorderWidth=I(0.003)),
-            rect("MascVideo2", (-330, -132), Center=I((0.72, 0.55)), Width=I(0.36), Height=I(0.2025), CornerRadius=I(0.06),
+            rect("MascVideo2", (-330, -132), Center=I((0.72, 0.55)), Width=I(0.36), Height=I(0.36), CornerRadius=I(0.06),
                  Solid=I(0), BorderWidth=I(0.003)),
             ellipse("MascCanal", (-275, -132), Center=I((0.5, 0.2)), Width=I(0.13), Height=I(0.13), Solid=I(0), BorderWidth=I(0.003)),
             solid("Video1", (1, 1, 1), (-385, -99), mask="MascVideo1"),
@@ -1269,7 +1274,7 @@ def suscribete(name, anim):
     pulse = f"max(0, sin(({p} - 0.45)/0.1*{PI}))*min(1, max(0, ({p} - 0.45)*100))*min(1, max(0, (0.55 - {p})*100))"
     ucs, inputs = kit(h, 0.15, 0.1, [uc("Rebote", "Rebote", 1.5, 0, 3), uc("E", "Curva interna", 1, -1, 2, clamp=False)],
                       {"Rebote": I(1.5), "E": I(1, ease_back(f"{h}.U", h))})
-    body = [rect("MascBoton", (-385, -132), Center=I((0.5, 0.2)), Width=I(0.26), Height=I(0.065), CornerRadius=I(1)),
+    body = [rect("MascBoton", (-385, -132), Center=I((0.5, 0.2)), Width=I(0.26), Height=I(0.065 * W16), CornerRadius=I(1)),
             solid("Boton", (0.9, 0.1, 0.1), (-385, -99), mask="MascBoton"),
             text_tool("Texto", "SUSCRÍBETE", 0.04, (0.5, 0.2), (-330, -99), extra={"CharacterSpacing": I(1.1)}),
             merge("Pastilla", "Lienzo", "Boton", (-275, -66)),
@@ -1289,7 +1294,7 @@ def cita(name, anim):
     body = [text_tool("Comillas", "“", 0.25, (0.5, 0.72), (-385, -132), rgb=(0.95, 0.75, 0.3), font="Georgia"),
             text_tool("Frase", "La creatividad es la inteligencia\ndivirtiéndose.", 0.05, (0.5, 0.52), (-330, -132),
                       font="Georgia", style="Italic"),
-            rect("MascRaya", (-275, -165), Center=I((0.5, 0.38)), Width=I(0, f"0.12*{sl}"), Height=I(0.002)),
+            rect("MascRaya", (-275, -165), Center=I((0.5, 0.38)), Width=I(0, f"0.12*{sl}"), Height=I(0.002 * W16)),
             solid("Raya", (0.95, 0.75, 0.3), (-275, -132), mask="MascRaya"),
             text_tool("Autor", "ALBERT EINSTEIN", 0.028, (0.5, 0.33), (-220, -132), rgb=(0.8, 0.8, 0.8), style="Regular",
                       extra={"CharacterSpacing": I(1.3)})]
@@ -1313,8 +1318,8 @@ def titulo_apertura(name, anim):
                       extra={"CharacterSpacing": I(1, f"1 + {h}.Tracking*(1 - {s_main})")}),
             text_tool("Sub", "UNA HISTORIA ORIGINAL", 0.025, (0.5, 0.42), (-330, -132), rgb=(0.8, 0.8, 0.8), style="Regular",
                       extra={"CharacterSpacing": I(1.6)}),
-            rect("MascSup", (-275, -165), Center=I((0.5, 0.6)), Width=I(0, f"0.3*{sl}"), Height=I(0.0015)),
-            rect("MascInf", (-220, -165), Center=I((0.5, 0.385)), Width=I(0, f"0.3*{sl}"), Height=I(0.0015)),
+            rect("MascSup", (-275, -165), Center=I((0.5, 0.6)), Width=I(0, f"0.3*{sl}"), Height=I(0.0015 * W16)),
+            rect("MascInf", (-220, -165), Center=I((0.5, 0.385)), Width=I(0, f"0.3*{sl}"), Height=I(0.0015 * W16)),
             solid("LineaSup", (1, 1, 1), (-275, -132), alpha=0.7, mask="MascSup"),
             solid("LineaInf", (1, 1, 1), (-220, -132), alpha=0.7, mask="MascInf")]
     pubs = [pub("Principal", "StyledText", "Título"), pub("Sub", "StyledText", "Subtítulo"),
@@ -1329,7 +1334,7 @@ def separador(name, anim):
     h = "Separador"
     sl = stage(h, 0, 0.7)
     ucs, inputs = kit(h, 0.25, 0.12, [uc("Largo", "Largo", 0.4, 0.02, 1)], {"Largo": I(0.4)})
-    body = [rect("MascLinea", (-385, -132), Center=I((0.5, 0.5)), Width=I(0, f"{h}.Largo*{sl}"), Height=I(0.0018)),
+    body = [rect("MascLinea", (-385, -132), Center=I((0.5, 0.5)), Width=I(0, f"{h}.Largo*{sl}"), Height=I(0.0018 * W16)),
             ellipse("MascIzq", (-330, -132), Center=I((0.5, 0.5), f"Point(0.5 - {h}.Largo*{sl}/2, 0.5)"), Width=I(0.008), Height=I(0.008)),
             ellipse("MascDer", (-275, -132), Center=I((0.5, 0.5), f"Point(0.5 + {h}.Largo*{sl}/2, 0.5)"), Width=I(0.008), Height=I(0.008),
                     EffectMask=I(link="MascIzq", out="Mask")),
@@ -1352,7 +1357,7 @@ def linea_tiempo(name, anim):
     years = ["1990", "2000", "2010", "2020", "2030"]
     ucs, inputs = kit(h, 0.6, 0.1)
     body = [rect("MascBase", (-385, -198), Center=I((0.5, 0.5), f"Point(0.15 + 0.35*{stage(h, 0, 0.3)}, 0.5)"),
-                 Width=I(0, f"0.7*{stage(h, 0, 0.3)}"), Height=I(0.002)),
+                 Width=I(0, f"0.7*{stage(h, 0, 0.3)}"), Height=I(0.002 * W16)),
             solid("Base", (1, 1, 1), (-385, -165), alpha=0.6, mask="MascBase")]
     layers = [("Base", f"{h}.Xs")]
     for i, x in enumerate(xs, 1):
@@ -1495,19 +1500,17 @@ def tarjeta(name, anim):
     h = "Tarjeta"
     tools = [Tool("Reducir", "Transform", {"Size": I(0.85, f"{h}.Tamano")}, pos=(-330, 0)),
              solid("Fondo", (0.95, 0.93, 0.9), (-330, -132)),
-             rect("MascTarjeta", (-275, -165), Width=I(0.85, f"{h}.Tamano"), Height=I(1.51, f"{h}.Tamano/{h}.Aspecto"),
+             rect("MascTarjeta", (-275, -165), Width=I(0.85, f"{h}.Tamano"), Height=I(0.85, f"{h}.Tamano"),
                   CornerRadius=I(0.08, f"{h}.Redondeo")),
-             rect("MascSombra", (-220, -165), Width=I(0.85, f"{h}.Tamano"), Height=I(1.51, f"{h}.Tamano/{h}.Aspecto"),
+             rect("MascSombra", (-220, -165), Width=I(0.85, f"{h}.Tamano"), Height=I(0.85, f"{h}.Tamano"),
                   CornerRadius=I(0.08, f"{h}.Redondeo"), SoftEdge=I(0.03), Center=I((0.5, 0.49))),
              solid("Sombra", (0, 0, 0), (-220, -132), mask="MascSombra"),
              merge("ConSombra", "Fondo", "Sombra", (-165, -66), blend=0.35),
              merge(h, "ConSombra", "Reducir", (-110, 0), blend=1, extra={"EffectMask": I(link="MascTarjeta", out="Mask")},
-                   ucs=[uc("Tamano", "Tamaño", 0.85, 0.3, 1), uc("Redondeo", "Redondeo de esquinas", 0.08, 0, 0.5),
-                        uc("Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625, 0.4, 3)])]
-    tools[-1].inputs.update({"Tamano": I(0.85), "Redondeo": I(0.08), "Aspecto": I(0.5625)})
+                   ucs=[uc("Tamano", "Tamaño", 0.85, 0.3, 1), uc("Redondeo", "Redondeo de esquinas", 0.08, 0, 0.5)])]
+    tools[-1].inputs.update({"Tamano": I(0.85), "Redondeo": I(0.08)})
     pubs = [pub(h, "Tamano", "Tamaño", 0.85), pub(h, "Redondeo", "Redondeo de esquinas", 0.08),
-            pub_color("Fondo", "Color del fondo", (0.95, 0.93, 0.9), 3), pub("ConSombra", "Blend", "Sombra", 0.35),
-            pub(h, "Aspecto", "Aspecto del timeline (9:16 = 0.5625)", 0.5625)]
+            pub_color("Fondo", "Color del fondo", (0.95, 0.93, 0.9), 3), pub("ConSombra", "Blend", "Sombra", 0.35)]
     return macro(name, [("Reducir", "Input")], pubs, h, tools)
 
 
@@ -1589,7 +1592,7 @@ def texto_resaltado(name, anim):
                                      uc("Inclinacion", "Inclinación (grados)", -2, -15, 15)],
                       {"Ancho": I(0.42), "Alto": I(0.075), "Inclinacion": I(-2)})
     body = [rect("MascBanda", (-385, -165), Center=I((0.29, 0.497), f"Point(0.5 - {h}.Ancho/2 + {h}.Ancho*{grow}/2, 0.497)"),
-                 Width=I(0, f"{h}.Ancho*{grow}"), Height=I(0.075, f"{h}.Alto"), CornerRadius=I(0.15),
+                 Width=I(0, f"{h}.Ancho*{grow}"), Height=I(0.133, f"{h}.Alto*{W16}"), CornerRadius=I(0.15),
                  Angle=I(-2, f"{h}.Inclinacion")),
             solid("Banda", (1, 0.85, 0.1), (-385, -132), mask="MascBanda"),
             text_tool("Texto", "PALABRA CLAVE", 0.07, (0.5, 0.5), (-330, -132), rgb=(0.05, 0.05, 0.05))]
@@ -1698,16 +1701,14 @@ def tr_barras(name, anim):
         d = "1" if i % 2 == 0 else f"(1 - 2*{h}.Alternar)"
         x = (i + 0.5) / n
         tools += [rect(f"MascBarra{i}", (-385 + 44 * i, -99), Center=I((x, 1.55), f"Point({x:g}, 0.5 + {d}*1.05*(1 - {e}))"),
-                       Width=I(1 / n + 0.002), Height=I(0.59, f"1.05/{h}.Aspecto")),
+                       Width=I(1 / n + 0.002), Height=I(1.05)),
                   merge(f"Barra{i}", last, "EntradaB", (-385 + 44 * i, 0), extra={"EffectMask": I(link=f"MascBarra{i}", out="Mask")})]
         last = f"Barra{i}"
     ucs = [uc("Progreso", "Progreso", 0, 0, 1), uc("Escalonado", "Escalonado", 0.6, 0, 3),
-           uc("Alternar", "Alternar arriba / abajo", 1, 0, 1, checkbox=True),
-           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3)]
+           uc("Alternar", "Alternar arriba / abajo", 1, 0, 1, checkbox=True)]
     tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Progreso": I(link=anim, out="Value"),
-                                                "Escalonado": I(0.6), "Alternar": I(1), "Aspecto": I(1.7778)}, ucs, (0, 0)))
-    pubs = [pub(h, "Escalonado", "Escalonado", 0.6), pub(h, "Alternar", "Alternar arriba / abajo", 1),
-            pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778)]
+                                                "Escalonado": I(0.6), "Alternar": I(1)}, ucs, (0, 0)))
+    pubs = [pub(h, "Escalonado", "Escalonado", 0.6), pub(h, "Alternar", "Alternar arriba / abajo", 1)]
     return macro(name, [("EntradaA", "Input"), ("EntradaB", "Input")], pubs, h, tools, anim)
 
 
@@ -1749,8 +1750,8 @@ def cam_rec(name, anim):
     for j, (sx, sy) in enumerate(((-1, 1), (1, 1), (-1, -1), (1, -1))):
         cx = f"0.5 + {sx}*(0.5 - {h}.Margen)"
         cy = f"0.5 + {sy}*(0.5 - {h}.Margen*{asp})"
-        for k, (center, w, ht) in enumerate(((f"Point({cx} - {sx}*{h}.Largo/2, {cy})", f"{h}.Largo", f"{h}.Grosor"),
-                                             (f"Point({cx}, {cy} - {sy}*{h}.Largo*{asp}/2)", f"{h}.Grosor", f"{h}.Largo"))):
+        for k, (center, w, ht) in enumerate(((f"Point({cx} - {sx}*{h}.Largo/2, {cy})", f"{h}.Largo", f"{h}.Grosor*{asp}"),
+                                             (f"Point({cx}, {cy} - {sy}*{h}.Largo*{asp}/2)", f"{h}.Grosor", f"{h}.Largo*{asp}"))):
             m = f"Esq{j}{k}"
             tools += [rect(f"Masc{m}", (-550 + 33 * (2 * j + k), -198), Center=I((0.5, 0.5), center),
                            Width=I(0.06, w), Height=I(0.004, ht)),
@@ -1762,12 +1763,12 @@ def cam_rec(name, anim):
               ui_color(text_tool("Codigo", "00:00:00:00", 0.035, (0.82, 0.88), (-165, -165), font="Courier New",
                                  extra={"StyledText": I("00:00:00:00", timecode(f"(time/{h}.FPS + {h}.Inicio)", f"{h}.FPS"))}), text=True),
               ui_color(text_tool("Info", "4K  30p", 0.03, (0.14, 0.12), (-110, -165), style="Regular"), text=True),
-              rect("MascPila", (-55, -198), Center=I((0.86, 0.12)), Width=I(0.05), Height=I(0.022), Solid=I(0), BorderWidth=I(0.002)),
+              rect("MascPila", (-55, -198), Center=I((0.86, 0.12)), Width=I(0.05), Height=I(0.039, f"0.022*{asp}"), Solid=I(0), BorderWidth=I(0.002)),
               ui_color(solid("Pila", (1, 1, 1), (-55, -165), mask="MascPila")),
               rect("MascCarga", (0, -198), Center=I((0.86, 0.12), f"Point(0.84 + 0.02*{h}.Bateria, 0.12)"),
-                   Width=I(0.028, f"0.04*{h}.Bateria"), Height=I(0.014)),
+                   Width=I(0.028, f"0.04*{h}.Bateria"), Height=I(0.025, f"0.014*{asp}")),
               ui_color(solid("Carga", (1, 1, 1), (0, -165), mask="MascCarga")),
-              rect("MascBorne", (55, -198), Center=I((0.888, 0.12)), Width=I(0.004), Height=I(0.01)),
+              rect("MascBorne", (55, -198), Center=I((0.888, 0.12)), Width=I(0.004), Height=I(0.018, f"0.01*{asp}")),
               ui_color(solid("Borne", (1, 1, 1), (55, -165), mask="MascBorne"))]
     blink = f"iif(sin(time*{PI}/{h}.FPS) > 0, 1, 0)"
     t, last = compose([(m, None) for m in layers] + [("Punto", blink), ("TextoREC", None), ("Codigo", None), ("Info", None),
@@ -1900,21 +1901,20 @@ def retro_crt(name, anim):
     tools += t
     tools += [Tool("Parpadeo", "BrightnessContrast", {"Input": I(link=last),
                    "Gain": I(1, f"1 + {h}.Parpadeo*0.04*sin(time*9.1)*sin(time*4.3 + 1)")}, pos=(55, 0)),
-              rect("MascPantalla", (110, -99), Invert=I(1), Width=I(0.96), Height=I(0.54, f"0.96/{h}.Aspecto"),
+              rect("MascPantalla", (110, -99), Invert=I(1), Width=I(0.96), Height=I(0.96),
                    CornerRadius=I(0.12), SoftEdge=I(0.01)),
               solid("Marco", (0.02, 0.02, 0.02), (110, -66), mask="MascPantalla"),
               merge("ConMarco", "Parpadeo", "Marco", (165, 0), blend=1)]
     t, last = blk_vignette("Vin", "ConMarco", 220, amount=0.35)
     tools += t
     ucs = [uc("Separacion", "Separación de color", 0.002, 0, 0.02), uc("Lineas", "Líneas", 0.3, 0, 1),
-           uc("NumLineas", "Número de líneas", 300, 50, 1000), uc("Parpadeo", "Parpadeo", 1, 0, 5),
-           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3)]
+           uc("NumLineas", "Número de líneas", 300, 50, 1000), uc("Parpadeo", "Parpadeo", 1, 0, 5)]
     tools.append(Tool(h, "BrightnessContrast", {"Input": I(link=last), "Separacion": I(0.002), "Lineas": I(0.3), "NumLineas": I(300),
-                                                "Parpadeo": I(1), "Aspecto": I(1.7778)}, ucs, (330, 0)))
+                                                "Parpadeo": I(1)}, ucs, (330, 0)))
     pubs = [pub(h, "Separacion", "Separación de color", 0.002), pub("BlBloom", "Blend", "Brillo", 0.35),
             pub(h, "Lineas", "Líneas", 0.3), pub(h, "NumLineas", "Número de líneas", 300), pub(h, "Parpadeo", "Parpadeo", 1),
             pub("ConMarco", "Blend", "Marco de la pantalla", 1), pub("MascPantalla", "CornerRadius", "Redondeo de la pantalla", 0.12),
-            pub("VinVineta", "Blend", "Viñeta", 0.35), pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 1.7778)]
+            pub("VinVineta", "Blend", "Viñeta", 0.35)]
     return macro(name, [("Entrada", "Input")], pubs, h, tools)
 
 
@@ -1929,7 +1929,7 @@ def pantalla_dividida(name, anim):
                                            "Size": I(1, f"max({cw}, {ch})*{h}.Zoom")}, pos=(-220, 0)),
              solid("Vacio", (0, 0, 0), (-220, -66), alpha=0),
              rect("MascCelda", (-165, -99), Center=I((0.5, 0.75), f"Point({cx}, {cy})"),
-                  Width=I(1, f"max(0, {cw} - {h}.Separacion)"), Height=I(0.89, f"max(0, {ch}/{h}.Aspecto - {h}.Separacion)"),
+                  Width=I(1, f"max(0, {cw} - {h}.Separacion)"), Height=I(0.49, f"max(0, {ch} - {h}.Separacion*{h}.Aspecto)"),
                   CornerRadius=I(0, f"{h}.Redondeo"))]
     ucs = [uc("Columnas", "Columnas", 1, 1, 4, integer=True), uc("Filas", "Filas", 2, 1, 4, integer=True),
            uc("Columna", "Columna de este clip", 1, 1, 4, integer=True), uc("Fila", "Fila de este clip (1 = arriba)", 1, 1, 4, integer=True),
@@ -2209,7 +2209,7 @@ def estilo_elegante(name, anim_):
                  pos=(-385, -99)),
             mover("Anim1", "Desenfoque", (-385, -66), cy=f"0.55 - 0.03*(1 - {s1})"),
             mover("Anim2", "Fecha", (-330, -66), cy=f"0.405 - 0.02*(1 - {s2})"),
-            rect("MascLinea", (-275, -165), Center=I((0.5, 0.457)), Width=I(0, f"0.18*{s2}"), Height=I(0.0012)),
+            rect("MascLinea", (-275, -165), Center=I((0.5, 0.457)), Width=I(0, f"0.18*{s2}"), Height=I(0.0021, f"0.0012*{icon_asp(h)}")),
             solid("Linea", cream, (-275, -132), alpha=0.7, mask="MascLinea")]
     for ch in ("Red", "Green", "Blue"):
         body[1].inputs[f"{ch}1"] = I(1, f"Nombres.{ch}1")
@@ -2266,7 +2266,7 @@ def estilo_deportivo(name, anim_):
     ucs, inputs = kit(h, 0.2, 0.1)
     accent = (0.9, 0.1, 0.15)
     body = [rect("MascBarra", (-440, -165), Center=I((0.3, 0.2), f"Point(0.06 + 0.25*{eb}, 0.205)"), Width=I(0.5, f"0.5*{eb}"),
-                 Height=I(0.085), Angle=I(6)),
+                 Height=I(0.15, f"0.085*{icon_asp(h)}"), Angle=I(6)),
             solid("Barra", accent, (-440, -132), mask="MascBarra"),
             styled("Nombre", "APELLIDO", "Teko", "SemiBold", 0.11, (-385, -132), center=(0.08, 0.2), left=True,
                    hard=((0, 0, 0), (0.006, -0.01))),
@@ -2331,7 +2331,7 @@ def estilo_nota(name, anim_):
     body = [styled("Texto", "nota rápida :)", "Ink Free", "Regular", 0.075, (-385, -132), soft=((0, 0, 0), (0.003, -0.005), 3)),
             mover("Anim1", "Texto", (-385, -66), cy=f"0.52 - 0.02*(1 - {phase(h, 0, 0.5)})", angle=f"{h}.Vaiven*1.5*sin(time*0.12)"),
             rect("MascRaya", (-330, -165), Center=I((0.32, 0.455), f"Point(0.5 - {h}.Ancho/2 + {h}.Ancho*{g}/2, 0.455)"),
-                 Width=I(0, f"{h}.Ancho*{g}"), Height=I(0.01), Angle=I(-2), CornerRadius=I(0.5)),
+                 Width=I(0, f"{h}.Ancho*{g}"), Height=I(0.018, f"0.01*{icon_asp(h)}"), Angle=I(-2), CornerRadius=I(0.5)),
             solid("Raya", (1, 0.85, 0.1), (-330, -132), alpha=0.85, mask="MascRaya")]
     pubs = [pub("Texto", "StyledText", "Texto"), *text_pubs("Texto", "", 0.075, (1, 1, 1), 1),
             pub_color("Raya", "Color del subrayado", (1, 0.85, 0.1), "c2"), pub(h, "Ancho", "Ancho del subrayado", 0.36),
@@ -2393,7 +2393,7 @@ def social_reencuadre(name, anim):
                                           "Center": I((0.5, 0.5), f"Point(0.5, 0.5 + {h}.MoverY)")}, pos=(-220, 33)),
              rect("MascFrente", (-165, 66), Center=I((0.5, 0.5), f"Point(0.5, 0.5 + {h}.MoverY)"),
                   Width=I(1, f"iif({wide}, 1, {ac}/{at})*{h}.EscalaFrente"),
-                  Height=I(0.5625, f"iif({wide}, 1/{ac}, 1/{at})*{h}.EscalaFrente"), CornerRadius=I(0, f"{h}.Redondeo"))]
+                  Height=I(0.316, f"iif({wide}, {at}/{ac}, 1)*{h}.EscalaFrente"), CornerRadius=I(0, f"{h}.Redondeo"))]
     ucs = [uc("AspClip", "Aspecto del clip (16:9 = 1.778, 9:16 = 0.5625)", 1.7778, 0.4, 3),
            uc("AspTL", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625, 0.4, 3),
            uc("ZoomFondo", "Zoom extra del fondo", 1.05, 1, 3), uc("EscalaFrente", "Escala del clip", 1, 0.3, 3),
@@ -2414,18 +2414,18 @@ def social_zona_segura(name, anim):
     """Guia de edicion: zonas que tapan los botones y textos de TikTok/Reels/Shorts (vertical) o marcos seguros (horizontal).
     Quitala antes de exportar."""
     h = "Zonas"
-    asp, v = f"{h}.Aspecto", f"{h}.Vertical"
+    v = f"{h}.Vertical"
     tools = [Tool("Entrada", "PipeRouter", pos=(-440, 0)), solid("Lienzo", (0, 0, 0), (-385, 0), alpha=0)]
-    bands = [("Sup", f"Point(0.5, 1 - {h}.MSup/2)", "1", f"{h}.MSup/{asp}"),
-             ("Inf", f"Point(0.5, {h}.MInf/2)", "1", f"{h}.MInf/{asp}"),
-             ("Der", f"Point(1 - {h}.MDer/2, 0.5)", f"{h}.MDer", f"1.05/{asp}")]
+    bands = [("Sup", f"Point(0.5, 1 - {h}.MSup/2)", "1", f"{h}.MSup"),
+             ("Inf", f"Point(0.5, {h}.MInf/2)", "1", f"{h}.MInf"),
+             ("Der", f"Point(1 - {h}.MDer/2, 0.5)", f"{h}.MDer", "1.05")]
     layers = []
     for i, (n, c, w, ht) in enumerate(bands):
         tools += [rect(f"Masc{n}", (-330 + 55 * i, -132), Center=I((0.5, 0.5), c), Width=I(1, w), Height=I(0.1, ht)),
                   solid(f"Zona{n}", (1, 0.15, 0.15), (-330 + 55 * i, -99), mask=f"Masc{n}")]
         layers.append((f"Zona{n}", f"0.35*{v}"))
     for i, (n, k) in enumerate((("Accion", 0.93), ("Titulos", 0.9))):
-        tools += [rect(f"Masc{n}", (-165 + 55 * i, -132), Width=I(k), Height=I(k / 1.7778, f"{k:g}/{asp}"), Solid=I(0), BorderWidth=I(0.002)),
+        tools += [rect(f"Masc{n}", (-165 + 55 * i, -132), Width=I(k), Height=I(k), Solid=I(0), BorderWidth=I(0.002)),
                   solid(f"Marco{n}", (0.2, 1, 0.4), (-165 + 55 * i, -99), mask=f"Masc{n}")]
         layers.append((f"Marco{n}", f"0.8*(1 - {v})"))
     for z in ("ZonaSup", "ZonaInf"):
@@ -2435,14 +2435,11 @@ def social_zona_segura(name, anim):
     tools.append(merge("Guia", "Entrada", last, (330, 0), blend=1))
     ucs = [uc("Vertical", "Vertical (desmarcado = marcos 16:9)", 1, 0, 1, checkbox=True),
            uc("MSup", "Zona superior", 0.1, 0, 0.5), uc("MInf", "Zona inferior (descripción y subtítulos)", 0.22, 0, 0.5),
-           uc("MDer", "Zona derecha (botones)", 0.13, 0, 0.5),
-           uc("Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625, 0.4, 3)]
-    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Guia"), "Vertical": I(1), "MSup": I(0.1), "MInf": I(0.22), "MDer": I(0.13),
-                                                "Aspecto": I(0.5625)}, ucs, (385, 0)))
+           uc("MDer", "Zona derecha (botones)", 0.13, 0, 0.5)]
+    tools.append(Tool(h, "BrightnessContrast", {"Input": I(link="Guia"), "Vertical": I(1), "MSup": I(0.1), "MInf": I(0.22), "MDer": I(0.13)}, ucs, (385, 0)))
     pubs = numbered([pub(h, "Vertical", "Vertical (desmarcado = marcos 16:9)", 1), pub(h, "MSup", "Zona superior", 0.1),
                      pub(h, "MInf", "Zona inferior (descripción y subtítulos)", 0.22), pub(h, "MDer", "Zona derecha (botones)", 0.13),
-                     pub_color("ZonaDer", "Color de las zonas", (1, 0.15, 0.15), "c1"), pub("Guia", "Blend", "Opacidad de la guía", 1),
-                     pub(h, "Aspecto", "Aspecto del timeline (16:9 = 1.778, 9:16 = 0.5625)", 0.5625)])
+                     pub_color("ZonaDer", "Color de las zonas", (1, 0.15, 0.15), "c1"), pub("Guia", "Blend", "Opacidad de la guía", 1)])
     return macro(name, [("Entrada", "Input")], pubs, h, tools)
 
 
@@ -2678,7 +2675,7 @@ def gen_synthwave(name, anim):
                   merge(f"ConFranja{i}", last, f"Franja{i}", (-385 + 33 * i, 0))]
         last = f"ConFranja{i}"
     tools += [rect("MascSuelo", (-220, -165), Center=I((0.5, H / 2)), Width=I(1.2),
-                   Height=I(H / 1.7778, f"iif({vert} > 0.5, {H / 0.5625:.4f}, {H / 1.7778:.4f})")),
+                   Height=I(H)),
               solid("Suelo", (0.03, 0, 0.08), (-220, -132), mask="MascSuelo"),
               merge("ConSuelo", last, "Suelo", (-220, 0)),
               ellipse("MascHorizonte", (-165, -165), Center=I((0.5, H)), Width=I(1.4), Height=I(0.12), SoftEdge=I(0.15)),
@@ -2698,7 +2695,7 @@ def gen_synthwave(name, anim):
         xb = 0.5 + 0.16 * j
         geo = {}
         for tag, a in (("h", 1.7778), ("v", 0.5625)):
-            geo[tag] = (math.degrees(math.atan((xb - 0.5) * a / H)), math.hypot(xb - 0.5, H / a))
+            geo[tag] = (math.degrees(math.atan((xb - 0.5) * a / H)), math.hypot((xb - 0.5) * a, H))
         n = f"V{j + 7}"
         tools += [rect(f"Masc{n}", (110 + 22 * (j + 7), -198), Center=I(((0.5 + xb) / 2, H / 2)), Width=I(0.003),
                        Height=I(geo["h"][1], f"iif({vert} > 0.5, {geo['v'][1]:.4f}, {geo['h'][1]:.4f})"),
@@ -2952,10 +2949,10 @@ def comentario(name, foto):
     xa = f"{x0} + {pad + d / 2:g}"
     xt = f"{x0} + {2 * pad + d:g}"
     body = [solid("Base", (0, 0, 0), (-440, -198), alpha=0),
-            rect("MascCaja", (-385, -231), Width=I(0.52, f"{h}.Ancho"), Height=I(d + 2 * pad), CornerRadius=I(0.35)),
+            rect("MascCaja", (-385, -231), Width=I(0.52, f"{h}.Ancho"), Height=I(d + 2 * pad, f"{d + 2 * pad:g}*{asp}"), CornerRadius=I(0.35)),
             solid("Caja", (1, 1, 1), (-385, -198), mask="MascCaja"),
             # avatar con la misma mascara que la caja (rectangulo con esquinas al maximo = circulo), para que las unidades coincidan
-            rect("MascAvatar", (-330, -231), Center=I((0.27, 0.5), f"Point({xa}, 0.5)"), Width=I(d), Height=I(d), CornerRadius=I(1))]
+            rect("MascAvatar", (-330, -231), Center=I((0.27, 0.5), f"Point({xa}, 0.5)"), Width=I(d), Height=I(d, f"{d:g}*{asp}"), CornerRadius=I(1))]
     if foto:
         # el centro de la foto (un circulo del alto del cuadro, 1/aspecto en unidades de ancho) se escala al diametro del avatar
         body += [Tool("Foto", "Transform", {"Input": I(link="Entrada"), "Size": I(d * 1.7778, f"{d:g}*{asp}*{h}.ZoomFoto"),
@@ -3092,8 +3089,8 @@ def tr_corte(name, anim):
     tools = [Tool("EntradaA", "PipeRouter", pos=(-385, -66)), Tool("EntradaB", "PipeRouter", pos=(-385, 66))]
     last = "EntradaB"
     for side, sg in (("Sup", 1), ("Inf", -1)):
-        mx = f"0.5 + {sg}*4*(-sin({th}))"
-        my = f"0.5 + {sg}*4*cos({th})*{asp}"
+        mx = f"0.5 + {sg}*4*(-sin({th}))/{asp}"
+        my = f"0.5 + {sg}*4*cos({th})"
         dx = f"{sg}*{h}.Distancia*{e}*cos({th})"
         dy = f"{sg}*{h}.Distancia*{e}*sin({th})*{asp}"
         sep_x = f"{sg}*0.04*{e}*(-sin({th}))"
@@ -3152,7 +3149,8 @@ def ipt(h, dx, dy, cx="0.5", cy="0.5"):
 
 def shape(name, h, pos, dx, dy, w, ht, rgb, radius=0, angle=None, alpha=1, border=None):
     """Forma rectangular (o circular con radius=1) y su relleno de color. w/ht pueden ser numeros o expresiones."""
-    kw = {"Center": I((0.5, 0.5), ipt(h, dx, dy)), "Width": I(0.05, str(w)), "Height": I(0.05, str(ht)), "CornerRadius": I(radius)}
+    kw = {"Center": I((0.5, 0.5), ipt(h, dx, dy)), "Width": I(0.05, str(w)), "Height": I(0.05, f"({ht})*{icon_asp(h)}"),
+          "CornerRadius": I(radius)}
     if angle is not None:
         kw["Angle"] = I(0, str(angle))
     if border is not None:

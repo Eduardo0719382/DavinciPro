@@ -54,7 +54,7 @@
 						ClippingMode = Input { Value = FuID { "None" }, },
 						Center = Input { Value = { 0.3, 0.2 }, Expression = "Point(0.06 + 0.25*(max(0, min(1, (Deportivo.U - 0)/0.5)))*(max(0, min(1, (Deportivo.U - 0)/0.5)))*(3-2*(max(0, min(1, (Deportivo.U - 0)/0.5)))), 0.205)", },
 						Width = Input { Value = 0.5, Expression = "0.5*(max(0, min(1, (Deportivo.U - 0)/0.5)))*(max(0, min(1, (Deportivo.U - 0)/0.5)))*(3-2*(max(0, min(1, (Deportivo.U - 0)/0.5))))", },
-						Height = Input { Value = 0.085, },
+						Height = Input { Value = 0.15, Expression = "0.085*iif(Deportivo.Vertical > 0.5, 0.5625, 1.7778)", },
 						Angle = Input { Value = 6, },
 					},
 					ViewInfo = OperatorInfo { Pos = { -440, -165 } },

@@ -52,7 +52,7 @@
 						ClippingMode = Input { Value = FuID { "None" }, },
 						Center = Input { Value = { 0.29, 0.497 }, Expression = "Point(0.5 - Resaltado.Ancho/2 + Resaltado.Ancho*(max(0, min(1, (Resaltado.U - 0.25)/0.75)))*(max(0, min(1, (Resaltado.U - 0.25)/0.75)))*(3-2*(max(0, min(1, (Resaltado.U - 0.25)/0.75))))/2, 0.497)", },
 						Width = Input { Value = 0, Expression = "Resaltado.Ancho*(max(0, min(1, (Resaltado.U - 0.25)/0.75)))*(max(0, min(1, (Resaltado.U - 0.25)/0.75)))*(3-2*(max(0, min(1, (Resaltado.U - 0.25)/0.75))))", },
-						Height = Input { Value = 0.075, Expression = "Resaltado.Alto", },
+						Height = Input { Value = 0.133, Expression = "Resaltado.Alto*1.7778", },
 						CornerRadius = Input { Value = 0.15, },
 						Angle = Input { Value = -2, Expression = "Resaltado.Inclinacion", },
 					},

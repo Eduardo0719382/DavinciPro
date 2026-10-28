@@ -47,7 +47,7 @@
 						ClippingMode = Input { Value = FuID { "None" }, },
 						Center = Input { Value = { 0.5, 0.2 }, },
 						Width = Input { Value = 0.26, },
-						Height = Input { Value = 0.065, },
+						Height = Input { Value = 0.115557, },
 						CornerRadius = Input { Value = 1, },
 					},
 					ViewInfo = OperatorInfo { Pos = { -385, -132 } },

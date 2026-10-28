@@ -88,7 +88,7 @@
 						ClippingMode = Input { Value = FuID { "None" }, },
 						Center = Input { Value = { 0.32, 0.455 }, Expression = "Point(0.5 - Nota.Ancho/2 + Nota.Ancho*(max(0, min(1, (Nota.U - 0.3)/0.7)))*(max(0, min(1, (Nota.U - 0.3)/0.7)))*(3-2*(max(0, min(1, (Nota.U - 0.3)/0.7))))/2, 0.455)", },
 						Width = Input { Value = 0, Expression = "Nota.Ancho*(max(0, min(1, (Nota.U - 0.3)/0.7)))*(max(0, min(1, (Nota.U - 0.3)/0.7)))*(3-2*(max(0, min(1, (Nota.U - 0.3)/0.7))))", },
-						Height = Input { Value = 0.01, },
+						Height = Input { Value = 0.018, Expression = "0.01*iif(Nota.Vertical > 0.5, 0.5625, 1.7778)", },
 						Angle = Input { Value = -2, },
 						CornerRadius = Input { Value = 0.5, },
 					},

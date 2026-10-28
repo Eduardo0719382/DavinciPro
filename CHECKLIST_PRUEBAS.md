@@ -185,3 +185,10 @@ Antes de probar, instala las fuentes de [docs/fuentes.md](docs/fuentes.md) (o co
 - [ ] 18.7 `Icono_Flecha` con Ángulo 90: la flecha apunta a un lado y rebota en esa dirección.
 - [ ] 18.8 `Icono_Estrellas` con 4: cuatro estrellas doradas y una gris.
 - [ ] 18.9 `Icono_Redes` y `Icono_Cursor`: la pastilla se abre hacia la derecha; el cursor llega y hace clic con una onda.
+
+## 19. Corrección de proporciones (D24)
+- [ ] 19.1 En 16:9 y en 9:16 (con **Formato vertical** marcado): el avatar del comentario y los círculos de los iconos son redondos, el corazón tiene forma de corazón y el botón de play es un rectángulo redondeado, no una franja.
+- [ ] 19.2 `EndScreen`: los dos marcos de vídeo tienen proporción 16:9. `Suscribete`: el botón es una pastilla, no una línea.
+- [ ] 19.3 `Social_Tarjeta`, `Retro_CRT` y `TR_Barras` cubren el alto correcto sin necesitar el control de aspecto (ya no existe en ellas).
+- [ ] 19.4 `Social_ZonaSegura` en 9:16: la banda inferior ocupa el 22 % del alto. `Social_Reencuadre`: el clip 16:9 en 9:16 se ve entero, sin recortar arriba ni abajo.
+- [ ] 19.5 `TR_Corte`: las dos mitades se separan justo por la línea blanca.

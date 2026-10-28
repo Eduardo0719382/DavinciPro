@@ -62,7 +62,7 @@
 						ClippingMode = Input { Value = FuID { "None" }, },
 						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + (0), 0.5 + (0)*iif(Play.Vertical > 0.5, 0.5625, 1.7778))", },
 						Width = Input { Value = 0.05, Expression = "0.16", },
-						Height = Input { Value = 0.05, Expression = "0.112", },
+						Height = Input { Value = 0.05, Expression = "(0.112)*iif(Play.Vertical > 0.5, 0.5625, 1.7778)", },
 						CornerRadius = Input { Value = 0.35, },
 					},
 					ViewInfo = OperatorInfo { Pos = { -385, -231 } },

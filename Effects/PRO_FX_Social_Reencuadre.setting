@@ -69,7 +69,7 @@
 						ClippingMode = Input { Value = FuID { "None" }, },
 						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5, 0.5 + Reencuadre.MoverY)", },
 						Width = Input { Value = 1, Expression = "iif(Reencuadre.AspClip > Reencuadre.AspTL, 1, Reencuadre.AspClip/Reencuadre.AspTL)*Reencuadre.EscalaFrente", },
-						Height = Input { Value = 0.5625, Expression = "iif(Reencuadre.AspClip > Reencuadre.AspTL, 1/Reencuadre.AspClip, 1/Reencuadre.AspTL)*Reencuadre.EscalaFrente", },
+						Height = Input { Value = 0.316, Expression = "iif(Reencuadre.AspClip > Reencuadre.AspTL, Reencuadre.AspTL/Reencuadre.AspClip, 1)*Reencuadre.EscalaFrente", },
 						CornerRadius = Input { Value = 0, Expression = "Reencuadre.Redondeo", },
 					},
 					ViewInfo = OperatorInfo { Pos = { -165, 66 } },

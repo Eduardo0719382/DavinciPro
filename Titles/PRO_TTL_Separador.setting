@@ -47,7 +47,7 @@
 						ClippingMode = Input { Value = FuID { "None" }, },
 						Center = Input { Value = { 0.5, 0.5 }, },
 						Width = Input { Value = 0, Expression = "Separador.Largo*(max(0, min(1, (Separador.U - 0)/0.7)))*(max(0, min(1, (Separador.U - 0)/0.7)))*(3-2*(max(0, min(1, (Separador.U - 0)/0.7))))*Separador.Xs", },
-						Height = Input { Value = 0.0018, },
+						Height = Input { Value = 0.00320004, },
 					},
 					ViewInfo = OperatorInfo { Pos = { -385, -132 } },
 				},
