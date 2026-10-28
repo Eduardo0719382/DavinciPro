@@ -15,6 +15,8 @@ Los 10 estilos `PRO_TTL_Estilo_*` usan cada uno la fuente que mejor le va. Las f
 | `Estilo_Gamer` | Press Start 2P | (la misma) | Píxel de consola de 8 bits | [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) |
 | `Estilo_Nota` | Ink Free | — | Parece escrita con rotulador: cercana, para UGC y vlogs | Ink Free viene con Windows |
 
+**Lote 14 (clips de podcast):** `Podcast_Frase`, `Podcast_Subtitulo`, `Texto_Giro` y `Texto_Contorno` usan **Inter** (ExtraBold y Black), la fuente del estilo "edición dinámica": neutra, muy legible y con mucho peso en mayúsculas. [Descarga Inter](https://fonts.google.com/specimen/Inter). Las plantillas buscan la familia **"Inter 24pt"**, que es el nombre de los `.ttf` estáticos que trae el zip de Google Fonts (los que ya tienes instalados). Si instalas la versión variable, elige **Inter** en el Inspector.
+
 Otras piezas: `Texto_Maquina` usa Courier New y `Look_Digicam` usa OCR A Extended (Windows / Office). El resto usa Arial.
 
 ## Instalar una fuente

@@ -1,0 +1,158 @@
+{
+	Tools = ordered() {
+		PRO_FX_Din_BrilloCine = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Entrada", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "BrilloCine", Source = "Intensidad", Name = "Intensidad", Default = 0.8, },
+				Input2 = InstanceInput { SourceOp = "BrilloCine", Source = "Tamano", Name = "Tamaño del halo", Default = 40, },
+				Input3 = InstanceInput { SourceOp = "BrilloCine", Source = "Umbral", Name = "Umbral (más bajo = más brillo)", Default = 0.45, },
+				Input4 = InstanceInput { SourceOp = "BrilloCine", Source = "Grano", Name = "Grano", Default = 0.12, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "BrilloCine", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Entrada = PipeRouter {
+					CtrlWShown = false,
+					ViewInfo = PipeRouterInfo { Pos = { -440, 0 } },
+				},
+				Luces = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Entrada", Source = "Output", },
+						Low = Input { Value = 0.45, Expression = "BrilloCine.Umbral", },
+						High = Input { Value = 1, },
+						Saturation = Input { Value = 1.1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -385, -66 } },
+				},
+				HaloCerca = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 10, Expression = "BrilloCine.Tamano*0.25", },
+						Input = Input { SourceOp = "Luces", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -99 } },
+				},
+				HaloLejos = Blur {
+					CtrlWShown = false,
+					Inputs = {
+						Filter = Input { Value = FuID { "Fast Gaussian" }, },
+						XBlurSize = Input { Value = 40, Expression = "BrilloCine.Tamano", },
+						Input = Input { SourceOp = "Luces", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -330, -33 } },
+				},
+				ConCerca = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "Entrada", Source = "Output", },
+						Foreground = Input { SourceOp = "HaloCerca", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.5, Expression = "BrilloCine.Intensidad*0.6", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 0 } },
+				},
+				ConLejos = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ConCerca", Source = "Output", },
+						Foreground = Input { SourceOp = "HaloLejos", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Screen" }, },
+						Blend = Input { Value = 0.8, Expression = "BrilloCine.Intensidad", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 0 } },
+				},
+				GrRuido = FastNoise {
+					CtrlWShown = false,
+					Inputs = {
+						Width = Input { Value = 1920, },
+						Height = Input { Value = 1080, },
+						UseFrameFormatSettings = Input { Value = 1, },
+						["Gamut.SLogVersion"] = Input { Value = FuID { "SLog2" }, },
+						Detail = Input { Value = 4, },
+						Contrast = Input { Value = 1.5, },
+						XScale = Input { Value = 60, },
+						SeetheRate = Input { Value = 1, },
+						Discontinuous = Input { Value = 1, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 66 } },
+				},
+				GrGrano = Merge {
+					CtrlWShown = false,
+					Inputs = {
+						Background = Input { SourceOp = "ConLejos", Source = "Output", },
+						Foreground = Input { SourceOp = "GrRuido", Source = "Output", },
+						ApplyMode = Input { Value = FuID { "Overlay" }, },
+						Blend = Input { Value = 0.1, Expression = "BrilloCine.Grano", },
+						PerformDepthMerge = Input { Value = 0, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+				},
+				BrilloCine = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "GrGrano", Source = "Output", },
+						Intensidad = Input { Value = 0.8, },
+						Tamano = Input { Value = 40, },
+						Umbral = Input { Value = 0.45, },
+						Grano = Input { Value = 0.12, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -55, 0 } },
+					UserControls = ordered() {
+						Intensidad = {
+							LINKS_Name = "Intensidad",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.8,
+							INP_MinScale = 0,
+							INP_MaxScale = 2,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 2,
+							ICS_ControlPage = "Controls",
+						},
+						Tamano = {
+							LINKS_Name = "Tamaño del halo",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 40,
+							INP_MinScale = 2,
+							INP_MaxScale = 200,
+							INP_MinAllowed = 2,
+							INP_MaxAllowed = 200,
+							ICS_ControlPage = "Controls",
+						},
+						Umbral = {
+							LINKS_Name = "Umbral (más bajo = más brillo)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.45,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Grano = {
+							LINKS_Name = "Grano",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0.12,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Din_BrilloCine"
+}

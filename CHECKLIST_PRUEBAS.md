@@ -201,3 +201,15 @@ Prueba cada título en una timeline 1920×1080 y en otra 1080×1920. En la verti
 - [ ] 20.4 `Barra_Progreso` en vertical queda abajo del todo; `Suscribete`, por encima de la zona inferior.
 - [ ] 20.5 `Cam_REC` (con Aspecto 0.5625), `Cam_Seguridad`, `Look_Digicam`, `GEN_CuentaRegresiva`, `TR_AntesDespues` y `Social_TextoPop` en vertical: el texto tiene un tamaño razonable y no tapa el centro.
 - [ ] 20.6 Cambiar "Tamaño" en el Inspector de cualquier estilo sigue funcionando en los dos formatos.
+
+## 21. Lote 14: edición dinámica de podcast
+- [ ] 21.1 Aparecen las 13 piezas nuevas: 5 efectos, 1 generador, 2 transiciones y 5 títulos.
+- [ ] 21.2 `Podcast_*`, `Texto_Giro` y `Texto_Contorno` salen en **Inter**. *Si salen en Arial, elige en el Inspector la familia "Inter 24pt" o "Inter" y avísame cuál aparece.*
+- [ ] 21.3 `Podcast_Subtitulo`: con un clip de 3 s y la frase de ejemplo, cada palabra aparece sola y en orden, hasta la última. Con "Palabra destacada" = 2, la segunda sale amarilla. *Si no aparece texto, Fusion no acepta `string.gsub` o `string.match` en la expresión: avísame.*
+- [ ] 21.4 `Podcast_Frase`: la frase sube un poco al aparecer y la palabra clave tiene un brillo suave alrededor.
+- [ ] 21.5 `Din_Pendulo`: el plano se mece sin enseñar bordes negros. Si se ven, sube "Zoom".
+- [ ] 21.6 `Din_ZoomDestello` en un clip: entra desde cerca, con un flash que se apaga en el primer ~10 % del clip.
+- [ ] 21.7 `Social_TV` en 16:9 y en 9:16 (con Formato vertical): el clip llena la pantalla del televisor, con esquinas redondeadas, y el televisor no se sale del cuadro.
+- [ ] 21.8 `Texto_Contorno`: detrás de la palabra se abren tres contornos. Con la persona recortada encima, el texto queda detrás de ella.
+- [ ] 21.9 `Icono_Llama`: tiene forma de gota invertida (redonda abajo, en punta arriba) y titila.
+- [ ] 21.10 `TR_ZoomDestello`: el flash tapa el cambio. `TR_Balanceo`: el plano gira colgado desde arriba.

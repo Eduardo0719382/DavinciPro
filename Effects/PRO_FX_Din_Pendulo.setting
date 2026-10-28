@@ -1,0 +1,82 @@
+{
+	Tools = ordered() {
+		PRO_FX_Din_Pendulo = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "Pendulo", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Pendulo", Source = "Fuerza", Name = "Fuerza del flote", Default = 1, },
+				Input2 = InstanceInput { SourceOp = "Pendulo", Source = "Giro", Name = "Giro (grados)", Default = 1.5, },
+				Input3 = InstanceInput { SourceOp = "Pendulo", Source = "Periodo", Name = "Fotogramas por vaivén", Default = 90, },
+				Input4 = InstanceInput { SourceOp = "Pendulo", Source = "Zoom", Name = "Zoom (tapa los bordes)", Default = 1.06, },
+				Input5 = InstanceInput { SourceOp = "Pendulo", Source = "Pivot", Name = "Punto del que cuelga", },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Pendulo", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				Pendulo = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Pivot = Input { Value = { 0.5, 1 }, },
+						Angle = Input { Value = 0, Expression = "Pendulo.Giro*sin((time*2*3.14159265/Pendulo.Periodo))", },
+						Center = Input { Value = { 0.5, 0.5 }, Expression = "Point(0.5 + Pendulo.Fuerza*0.008*sin((time*2*3.14159265/Pendulo.Periodo) + 0.6), 0.5 + Pendulo.Fuerza*0.01*sin(2*(time*2*3.14159265/Pendulo.Periodo) + 1.3))", },
+						Size = Input { Value = 1.06, Expression = "Pendulo.Zoom + Pendulo.Fuerza*0.006*sin((time*2*3.14159265/Pendulo.Periodo)*0.5)", },
+						Fuerza = Input { Value = 1, },
+						Giro = Input { Value = 1.5, },
+						Periodo = Input { Value = 90, },
+						Zoom = Input { Value = 1.06, },
+					},
+					ViewInfo = OperatorInfo { Pos = { 0, 0 } },
+					UserControls = ordered() {
+						Fuerza = {
+							LINKS_Name = "Fuerza del flote",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1,
+							INP_MinScale = 0,
+							INP_MaxScale = 5,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 5,
+							ICS_ControlPage = "Controls",
+						},
+						Giro = {
+							LINKS_Name = "Giro (grados)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1.5,
+							INP_MinScale = 0,
+							INP_MaxScale = 15,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 15,
+							ICS_ControlPage = "Controls",
+						},
+						Periodo = {
+							LINKS_Name = "Fotogramas por vaivén",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 90,
+							INP_MinScale = 10,
+							INP_MaxScale = 600,
+							INP_MinAllowed = 10,
+							INP_MaxAllowed = 600,
+							ICS_ControlPage = "Controls",
+						},
+						Zoom = {
+							LINKS_Name = "Zoom (tapa los bordes)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 1.06,
+							INP_MinScale = 1,
+							INP_MaxScale = 1.5,
+							INP_MinAllowed = 1,
+							INP_MaxAllowed = 1.5,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+	},
+	ActiveTool = "PRO_FX_Din_Pendulo"
+}

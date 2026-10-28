@@ -508,3 +508,34 @@ Los iconos están dibujados con formas de Fusion: no necesitan imágenes ni fuen
 | `PRO_TTL_Icono_Cursor` | Cursor que llega al centro y hace clic con una onda | Colores, punto de partida X/Y |
 
 Las estrellas usan el carácter ★ de la fuente Segoe UI Symbol, que viene con Windows.
+
+# Lote 14: edición dinámica de podcast
+
+Piezas para montar clips de podcast "virales": cortes rápidos, zooms con destello, textos con brillo y la persona recortada sobre un fondo granulado. Los textos usan **Inter** (ver [fuentes.md](fuentes.md)).
+
+| Pieza | Para qué | Controles |
+|---|---|---|
+| `PRO_FX_Din_BrilloCine` | Brillo cinematográfico: halo suave en las luces y grano fino. En textos, aplícalo al **clip compuesto** (selecciona texto y vídeo › clic derecho › New Compound Clip) | Intensidad, tamaño del halo, umbral, grano |
+| `PRO_FX_Din_Pendulo` | Movimiento flotante de péndulo para personas recortadas, fondos o fotos | Fuerza, giro (0 = solo flote), fotogramas por vaivén, zoom, punto del que cuelga |
+| `PRO_FX_Din_ZoomDestello` | Entrada con zoom, desenfoque y un flash que se apaga: la entrada de cada corte | Zoom inicial, destello, desenfoque, color, centro, duración de entrada y salida |
+| `PRO_FX_Retro_1998` | Look de vídeo casero de los 90: cálido, negros levantados, halo, grano y viñeta | Intensidad, brillo, calidez, saturación, grano, viñeta |
+| `PRO_FX_Social_TV` | El clip dentro de un televisor antiguo en una habitación oscura | Formato vertical, tamaño, blanco y negro, líneas de barrido, brillo, colores |
+| `PRO_GEN_FondoGrano` | Fondo oscuro con textura, luz que se mueve y mucho grano, para ponerlo detrás de la persona recortada | Colores, luz, textura, grano, velocidad, viñeta |
+| `PRO_TR_ZoomDestello` | A se acerca de golpe, un flash blanco tapa el corte y B llega desde cerca | Zoom, desenfoque, destello, color |
+| `PRO_TR_Balanceo` | A sale balanceándose como un péndulo y B entra desde el otro lado | Giro, desenfoque |
+| `PRO_TTL_Podcast_Frase` | Frase en Inter con sombra suave que sube al aparecer, y palabra clave amarilla con brillo | Textos, fuentes, colores, brillo, opacidad de la sombra |
+| `PRO_TTL_Podcast_Subtitulo` | Subtítulos palabra a palabra: escribe la frase y cada palabra sale sola con un rebote. Las palabras se reparten en toda la duración del clip, así que recórtalo a lo que dura la frase | Frase, fuente, colores, palabra destacada, mayúsculas, contorno, rebote, brillo |
+| `PRO_TTL_Texto_Giro` | Texto en bucle que se mece girando y respira | Textos, fuentes, colores, giro, fotogramas por vaivén, respiración |
+| `PRO_TTL_Texto_Contorno` | Palabra gigante con tres ecos de contorno que se abren detrás | Palabra, tamaño, color, contorno, separación, pulso |
+| `PRO_TTL_Icono_Llama` | Llama que titila con brillo naranja y texto opcional | Colores, texto, titileo, brillo |
+
+Todos los títulos tienen **Formato vertical (9:16)**.
+
+## Cómo hacer en Resolve lo que estas plantillas no cubren
+
+- **Persona recortada (rotoscopia):** en la página Color, usa **Magic Mask** (Studio) sobre la persona y saca el alfa (clic derecho en el nodo › Add Alpha Output). En la página Edit pon ese clip en una pista superior. Para el **texto detrás de la persona**, deja `Texto_Contorno` o `Podcast_Frase` en una pista intermedia, entre el clip original y el recortado.
+- **Seguimiento de cámara a la cara:** Inspector › Video › **Smart Reframe** (Studio), o el Tracker de la página Color o el de Fusion. Para el **texto que sigue la cabeza**, aplica el Tracker de Fusion al clip compuesto.
+- **Pantalla verde (fondo, personaje, televisor):** Inspector › Video › **3D Keyer**, o el efecto **Delta Keyer**.
+- **Transiciones o elementos que traen fondo negro:** Inspector › Composite Mode › **Screen** o **Add**.
+- **Blanco y negro:** Inspector › Video › Saturation = 0, o `Social_TV` con "Blanco y negro" = 1.
+- **Eco en la voz y paisaje sonoro:** Fairlight › efecto **Echo** o **Delay** en el clip de audio. Los whoosh, booms y clics se añaden como clips de audio.

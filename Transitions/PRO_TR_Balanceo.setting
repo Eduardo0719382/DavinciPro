@@ -1,0 +1,107 @@
+{
+	Tools = ordered() {
+		PRO_TR_Balanceo = MacroOperator {
+			CtrlWZoom = false,
+			Inputs = ordered() {
+				MainInput1 = InstanceInput { SourceOp = "GiroA", Source = "Input", },
+				MainInput2 = InstanceInput { SourceOp = "GiroB", Source = "Input", },
+				Input1 = InstanceInput { SourceOp = "Balanceo", Source = "Giro", Name = "Giro (grados)", Default = 25, },
+				Input2 = InstanceInput { SourceOp = "Balanceo", Source = "Desenfoque", Name = "Desenfoque", Default = 30, },
+			},
+			Outputs = {
+				MainOutput1 = InstanceOutput { SourceOp = "Balanceo", Source = "Output", },
+			},
+			ViewInfo = GroupInfo { Pos = { 0, 0 } },
+			Tools = ordered() {
+				GiroA = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Pivot = Input { Value = { 0.5, 1.2 }, },
+						Angle = Input { Value = 0, Expression = "-1*Balanceo.Giro*min(1, 2*Balanceo.Progreso)*min(1, 2*Balanceo.Progreso)", },
+						Size = Input { Value = 1, Expression = "1 + 0.25*min(1, 2*Balanceo.Progreso)", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, -33 } },
+				},
+				GiroB = Transform {
+					CtrlWShown = false,
+					Inputs = {
+						Pivot = Input { Value = { 0.5, 1.2 }, },
+						Angle = Input { Value = 0, Expression = "1*Balanceo.Giro*(1 - max(0, 2*Balanceo.Progreso - 1))*(1 - max(0, 2*Balanceo.Progreso - 1))", },
+						Size = Input { Value = 1, Expression = "1 + 0.25*(1 - max(0, 2*Balanceo.Progreso - 1))", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -275, 33 } },
+				},
+				Cambio = Dissolve {
+					CtrlWShown = false,
+					Inputs = {
+						Mix = Input { Value = 0, Expression = "(max(0, min(1, (Balanceo.Progreso - 0.45)/0.1)))*(max(0, min(1, (Balanceo.Progreso - 0.45)/0.1)))*(3-2*(max(0, min(1, (Balanceo.Progreso - 0.45)/0.1))))", },
+						Background = Input { SourceOp = "GiroA", Source = "Output", },
+						Foreground = Input { SourceOp = "GiroB", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -220, 0 } },
+				},
+				Arrastre = DirectionalBlur {
+					CtrlWShown = false,
+					Inputs = {
+						Length = Input { Value = 0, Expression = "Balanceo.Desenfoque*sin(Balanceo.Progreso*3.14159265)*0.002", },
+						Angle = Input { Value = 0, },
+						ClippingMode = Input { Value = FuID { "None" }, },
+						Input = Input { SourceOp = "Cambio", Source = "Output", },
+					},
+					ViewInfo = OperatorInfo { Pos = { -165, 0 } },
+				},
+				Balanceo = BrightnessContrast {
+					CtrlWShown = false,
+					Inputs = {
+						Input = Input { SourceOp = "Arrastre", Source = "Output", },
+						Progreso = Input { SourceOp = "PROBalanceoAnim", Source = "Value", },
+						Giro = Input { Value = 25, },
+						Desenfoque = Input { Value = 30, },
+					},
+					ViewInfo = OperatorInfo { Pos = { -110, 0 } },
+					UserControls = ordered() {
+						Progreso = {
+							LINKS_Name = "Progreso",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 0,
+							INP_MinScale = 0,
+							INP_MaxScale = 1,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 1,
+							ICS_ControlPage = "Controls",
+						},
+						Giro = {
+							LINKS_Name = "Giro (grados)",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 25,
+							INP_MinScale = 0,
+							INP_MaxScale = 90,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 90,
+							ICS_ControlPage = "Controls",
+						},
+						Desenfoque = {
+							LINKS_Name = "Desenfoque",
+							LINKID_DataType = "Number",
+							INPID_InputControl = "SliderControl",
+							INP_Default = 30,
+							INP_MinScale = 0,
+							INP_MaxScale = 100,
+							INP_MinAllowed = 0,
+							INP_MaxAllowed = 100,
+							ICS_ControlPage = "Controls",
+						},
+					},
+				},
+			},
+		},
+		PROBalanceoAnim = LUTLookup {
+			Inputs = {
+			},
+			CtrlWZoom = false,
+		},
+	},
+	ActiveTool = "PRO_TR_Balanceo"
+}
